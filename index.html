@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kasir Offline — Multi Saldo (Tema Biru)</title>
+<style>
+  :root{
+    /* Palet gelap – nuansa biru */
+    --bg:#0b1020;            /* latar belakang */
+    --card:#131a2b;          /* kartu/panel */
+    --muted:#1a2338;         /* border / permukaan sekunder */
+    --text:#e7eeff;          /* teks utama */
+    --soft:#9fb0d2;          /* teks sekunder */
+    --primary:#3a86ff;       /* biru utama */
+    --primary-ink:#07122a;   /* teks di atas primary */
+    --accent:#7cc4ff;        /* aksen */
+    --danger:#ff6b6b;
+    --warn:#ffd166;
+    --ink:#0b1220;
+    --radius:14px;
+  }
+
+  /* Tema terang */
+  [data-theme="light"]{
+    --bg:#f6f8ff;
+    --card:#ffffff;
+    --muted:#e7ecf7;
+    --text:#0d1630;
+    --soft:#5b6a86;
+    --primary:#1e63ff;
+    --primary-ink:#ffffff;
+    --accent:#2d7dff;
+    --ink:#ffffff;
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--text);
+    font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial
+  }
+  a{color:inherit;text-decoration:none}
+
+  .appbar{
+    position:sticky;top:0;z-index:50;display:flex;gap:10px;align-items:center;
+    padding:12px 14px;
+    background:linear-gradient(180deg,rgba(11,16,32,.92),rgba(11,16,32,.5));
+    backdrop-filter:saturate(140%) blur(6px);
+    border-bottom:1px solid var(--muted)
+  }
+
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;border:1px solid transparent;
+    background:var(--muted);color:var(--text);padding:10px 14px;border-radius:12px;cursor:pointer
+  }
+  .btn.primary{background:var(--primary);color:var(--primary-ink)}
+  .btn.ghost{background:transparent;border-color:var(--muted)}
+  .btn.warn{background:var(--warn);color:#2c2200}
+  .btn.danger{background:var(--danger);color:#2a0000}
+
+  .wrap{padding:14px}
+  .grid{display:grid;gap:12px}
+  .card{background:var(--card);border:1px solid var(--muted);border-radius:var(--radius);padding:16px}
+  .title{font-weight:700;font-size:18px;margin:0 0 10px}
+  .sub{color:var(--soft);font-size:12px}
+
+  .input, select, textarea{
+    width:100%;border:1px solid var(--muted);background:#0f172a;color:var(--text);
+    padding:12px 12px;border-radius:12px;outline:none
+  }
+  [data-theme="light"] .input,[data-theme="light"] select,[data-theme="light"] textarea{background:#fff;color:#111}
+  label{display:block;margin:8px 0 6px;color:var(--soft);font-size:13px}
+
+  .row{display:grid;gap:10px}
+  .row.cols-2{grid-template-columns:1fr 1fr}
+  .row.cols-3{grid-template-columns:1fr 1fr 1fr}
+  .row.cols-4{grid-template-columns:repeat(4,1fr)}
+
+  .pill{
+    display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;
+    background:var(--muted);font-size:13px
+  }
+
+  .stat{display:flex;flex-direction:column;gap:6px;padding:14px;border:1px solid var(--muted);border-radius:12px;background:var(--card)}
+  .stat b{font-size:20px}
+
+  .drawer{position:fixed;inset:0 0 0 0;display:none;z-index:60}
+  .drawer.open{display:flex}
+  .drawer .mask{flex:1;background:rgba(0,0,0,.45)}
+  .drawer .panel{width:min(86vw,380px);height:100%;background:var(--card);border-right:1px solid var(--muted);padding:16px;overflow:auto}
+  .menu a{display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px}
+  .menu a:hover{background:var(--muted)}
+
+  .bottomnav{
+    position:fixed;bottom:0;left:0;right:0;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+    padding:10px;background:linear-gradient(0deg,var(--bg),rgba(0,0,0,0));
+    border-top:1px solid var(--muted)
+  }
+  .bottomnav .tab{
+    display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px;border-radius:12px;border:1px solid var(--muted);
+    background:var(--card);font-size:12px
+  }
+  .bottomnav .tab.active{outline:2px solid var(--primary); box-shadow:0 0 0 3px rgba(58,134,255,.15) inset}
+
+  main{padding-bottom:86px}
+  .avatar{width:42px;height:42px;border-radius:12px;border:1px solid var(--muted);background:#0b1220;display:grid;place-items:center;overflow:hidden}
+  img.logo{max-width:100%;max-height:40px;display:block}
+  .hidden{display:none}
+  .right{margin-left:auto}
+  .mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.mt24{margin-top:24px}
+
+  .seg{display:inline-grid;grid-auto-flow:column;gap:6px;background:var(--muted);padding:6px;border-radius:999px}
+  .seg button{border:none;background:transparent;padding:8px 12px;border-radius:999px;color:var(--soft);cursor:pointer}
+  .seg .on{background:var(--card);color:var(--text);border:1px solid var(--muted);box-shadow:0 0 0 2px rgba(58,134,255,.15) inset}
+
+  .table{width:100%;border-collapse:separate;border-spacing:0 8px}
+  .table th{font-size:12px;color:var(--soft);text-align:left;padding:0 8px}
+  .table td{background:var(--card);border:1px solid var(--muted);padding:10px;border-radius:10px}
+
+  @media (max-width:640px){
+    .row.cols-3{grid-template-columns:1fr}
+    .row.cols-4{grid-template-columns:1fr 1fr}
+  }
+</style>
+</head>
+<body>
+<header class="appbar">
+  <button class="btn" id="btnMenu" aria-label="Menu">☰</button>
+  <div class="avatar" id="logoBox" aria-hidden="true"><span>🧾</span></div>
+  <div>
+    <div id="headerTitle" style="font-weight:700">Kasir Multi Saldo</div>
+    <div class="sub" id="appMode">Offline • localStorage</div>
+  </div>
+  <span class="right"></span>
+  <span class="pill" id="whoami">👤 Admin</span>
+</header>
+
+<!-- Drawer / Burger -->
+<div class="drawer" id="drawer" aria-hidden="true">
+  <div class="panel">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <div class="avatar" style="width:50px;height:50px"><img id="logoSide" class="logo" alt=""></div>
+      <div>
+        <b id="shopNameSide">Nama Toko</b>
+        <div class="sub" id="shopAddrSide">Alamat</div>
+      </div>
+      <span class="right"></span>
+      <button class="btn" id="closeDrawer" aria-label="Tutup">✕</button>
+    </div>
+    <nav class="menu">
+      <a href="#" data-go="fisik">📦 Transaksi Fisik</a>
+      <a href="#" data-go="digital">💳 Transaksi Digital</a>
+      <a href="#" data-go="history">📜 History</a>
+      <a href="#" data-go="rekap">📈 Rekap</a>
+      <hr style="border-color:var(--muted)">
+      <a href="#" data-go="saldo">💼 Saldo Akun</a>
+      <a href="#" data-go="stok">🏷️ Stok Barang</a>
+      <a href="#" data-go="audit">🧮 Audit Stok</a>
+      <a href="#" data-go="inout">💸 Pemasukan & Pengeluaran</a>
+      <a href="#" data-go="settings">⚙️ Pengaturan</a>
+      <hr style="border-color:var(--muted)">
+      <a href="#" id="doBackup">⬇️ Backup (JSON)</a>
+      <a href="#" id="doRestore">⬆️ Restore (JSON)</a>
+      <a href="#" id="doReset" style="color:#ff9a9a">🗑️ Reset Semua</a>
+      <hr style="border-color:var(--muted)">
+      <a href="#" id="doLock">🔒 Logout / Kunci</a>
+    </nav>
+  </div>
+  <div class="mask" id="mask" role="button" tabindex="0" aria-label="Tutup menu"></div>
+</div>
+
+<main id="view" class="wrap grid">
+  <!-- ===== FISIK ===== -->
+  <section id="page-fisik" class="grid">
+    <div class="card">
+      <h3 class="title">Transaksi Fisik</h3>
+      <div class="row cols-3">
+        <div>
+          <label>Tanggal</label>
+          <input id="fDate" class="input" type="date" />
+        </div>
+        <div>
+          <label>Akun Saldo</label>
+          <select id="fAkun" class="input"></select>
+        </div>
+        <div>
+          <label>Qty</label>
+          <input id="fQty" class="input" type="number" min="1" value="1" />
+        </div>
+      </div>
+
+      <div class="row cols-3 mt8">
+        <div>
+          <label>Kode Barang</label>
+          <input id="fKode" class="input" placeholder="Scan / ketik kode" />
+        </div>
+        <div>
+          <label>Nama Barang</label>
+          <input id="fNama" class="input" placeholder="otomatis dari stok" readonly />
+        </div>
+        <div class="row" style="grid-template-columns:1fr auto;align-items:end">
+          <div>
+            <label>&nbsp;</label>
+            <button id="btnScan" class="btn">📷 Scan</button>
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <button id="btnAuto" class="btn">↻ Ambil dari stok</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="row cols-3 mt8">
+        <div>
+          <label>Harga Beli</label>
+          <input id="fBeli" class="input" readonly />
+        </div>
+        <div>
+          <label>Harga Jual</label>
+          <input id="fJual" class="input" readonly />
+        </div>
+        <div>
+          <label>Jenis</label>
+          <select id="fJenis" class="input">
+            <option value="beli">Pembelian (stok+, saldo-)</option>
+            <option value="jual">Penjualan (stok-, saldo+)</option>
+            <option value="retur">Retur Beli (stok-, saldo+)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row cols-3 mt8">
+        <div class="stat"><span class="sub">Modal</span><b id="fModal">Rp 0</b></div>
+        <div class="stat"><span class="sub">Penjualan</span><b id="fOmzet">Rp 0</b></div>
+        <div class="stat"><span class="sub">Laba</span><b id="fLaba">Rp 0</b></div>
+      </div>
+
+      <div class="row cols-2 mt16">
+        <button id="fSave" class="btn primary">Simpan</button>
+        <button id="fClear" class="btn ghost">Bersihkan</button>
+      </div>
+      <div class="sub mt8">Harga & nama barang otomatis dari stok; penjualan dicegah bila stok habis.</div>
+    </div>
+  </section>
+
+  <!-- ===== DIGITAL ===== -->
+  <section id="page-digital" class="grid hidden">
+    <div class="card">
+      <h3 class="title">Transaksi Digital</h3>
+      <div class="row cols-3">
+        <div><label>Tanggal</label><input id="dDate" class="input" type="date" /></div>
+        <div><label>Akun Saldo</label><select id="dAkun" class="input"></select></div>
+        <div><label>Jenis</label>
+          <select id="dJenis" class="input">
+            <option value="jual">Penjualan</option>
+            <option value="beli">Pembelian</option>
+            <option value="tarik">Tarik</option>
+          </select>
+        </div>
+      </div>
+      <div class="row cols-2 mt8">
+        <div><label>Harga Beli</label><input id="dBeli" class="input" type="number" value="0" /></div>
+        <div><label>Harga Jual</label><input id="dJual" class="input" type="number" value="0" /></div>
+      </div>
+      <label class="mt8">Deskripsi</label>
+      <input id="dDesc" class="input" placeholder="Keterangan (opsional)" />
+      <div class="row cols-2 mt16">
+        <button id="dSave" class="btn primary">Simpan</button>
+        <button id="dClear" class="btn ghost">Bersihkan</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== HISTORY ===== -->
+  <section id="page-history" class="grid hidden">
+    <div class="card">
+      <h3 class="title">History Transaksi</h3>
+      <div class="row cols-4" style="grid-template-columns:repeat(4,1fr)">
+        <select id="hScope" class="input">
+          <option value="day">Harian</option>
+          <option value="week">Mingguan</option>
+          <option value="month" selected>Bulanan</option>
+          <option value="all">Semua</option>
+        </select>
+        <select id="hAkun" class="input"></select>
+        <input id="hFrom" class="input" type="date" />
+        <input id="hTo" class="input" type="date" />
+      </div>
+      <div class="row cols-3 mt8">
+        <input id="hSearch" class="input" placeholder="Cari (kode/nama/akun/deskripsi)" />
+        <button id="hClear" class="btn">Bersihkan Filter</button>
+        <div class="pill right" id="hSum">Total: Rp 0</div>
+      </div>
+      <div id="hList" class="mt16"></div>
+    </div>
+  </section>
+
+  <!-- ===== REKAP ===== -->
+  <section id="page-rekap" class="grid hidden">
+    <div class="card">
+      <h3 class="title">Rekap</h3>
+      <div class="seg" id="rkSeg">
+        <button data-s="day" class="on">Harian</button>
+        <button data-s="week">Mingguan</button>
+        <button data-s="month">Bulanan</button>
+      </div>
+      <div class="row cols-3 mt12">
+        <input id="rDate" class="input" type="date" />
+        <select id="rAkun" class="input"></select>
+        <div class="row" style="grid-template-columns:1fr auto auto;align-items:center">
+          <input id="rkTitle" class="input" placeholder="Judul / periode (editable)" />
+          <button class="btn" id="btnShare">Bagikan PNG</button>
+          <button class="btn" id="btnPrint">Print</button>
+        </div>
+      </div>
+
+      <div id="rkEditable" class="card mt12">
+        <div style="display:flex;gap:12px;align-items:center">
+          <div class="avatar"><img id="rkLogo" class="logo" alt=""></div>
+          <div>
+            <b id="rkName">Nama Usaha</b>
+            <div class="sub" id="rkAddr">Alamat • WA</div>
+          </div>
+        </div>
+        <hr style="border-color:var(--muted);margin:12px 0" />
+        <div id="rkBody">Belum ada data.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SALDO ===== -->
+  <section id="page-saldo" class="grid hidden">
+    <div class="card">
+      <h3 class="title">Akun Saldo</h3>
+      <div class="row cols-3">
+        <input id="sName" class="input" placeholder="Nama akun (mis: BRI)" />
+        <input id="sAwal" class="input" type="number" placeholder="Saldo sekarang" />
+        <input id="sLimit" class="input" type="number" placeholder="Limit (opsional)" />
+      </div>
+      <div class="row cols-3 mt8">
+        <button id="sAdd" class="btn primary">Tambah / Update</button>
+        <button id="sDel" class="btn danger">Hapus</button>
+        <div class="pill right" id="sumSaldo">Total: Rp 0</div>
+      </div>
+      <div id="sList" class="mt16"></div>
+    </div>
+  </section>
+
+  <!-- ===== STOK ===== -->
+  <section id="page-stok" class="grid hidden">
+    <div class="card">
+      <h3 class="title">Stok Barang</h3>
+      <div class="row cols-4">
+        <input id="tKode" class="input" placeholder="KODE" />
+        <input id="tNama" class="input" placeholder="Nama" />
+        <input id="tBeli" class="input" type="number" placeholder="H.Beli" />
+        <input id="tJual" class="input" type="number" placeholder="H.Jual" />
+      </div>
+      <div class="row cols-3 mt8">
+        <input id="tQty" class="input" type="number" placeholder="Stok Awal / Tambah" />
+        <button id="tAdd" class="btn primary">Tambah / Update</button>
+        <button id="tDel" class="btn danger">Hapus</button>
+      </div>
+      <div id="tList" class="mt16"></div>
+    </div>
+  </section>
+
+  <!-- ===== AUDIT ===== -->
+  <section id="page-audit" class="grid hidden">
+    <div class="card">
+      <h3 class="title">Audit Stok</h3>
+      <div class="row cols-3">
+        <input id="aKode" class="input" placeholder="KODE" />
+        <input id="aReal" class="input" type="number" placeholder="Stok fisik (hitung nyata)" />
+        <button id="aApply" class="btn primary">Simpan Audit</button>
+      </div>
+      <div class="row cols-2 mt8">
+        <button id="aPrint" class="btn">Print Audit</button>
+        <button id="aShare" class="btn">Share PNG</button>
+      </div>
+      <div id="aInfo" class="mt16 sub">Masukkan kode & stok fisik untuk menyesuaikan selisih.</div>
+      <div id="aList" class="mt16"></div>
+    </div>
+  </section>
+
+  <!-- ===== IN/OUT ===== -->
+  <section id="page-inout" class="grid hidden">
+    <div class="card">
+      <h3 class="title">Pemasukan & Pengeluaran</h3>
+      <div class="row cols-4" style="grid-template-columns:repeat(4,1fr)">
+        <input id="ioDate" class="input" type="date" />
+        <select id="ioAkun" class="input"></select>
+        <select id="ioJenis" class="input">
+          <option value="in">Pemasukan (+)</option>
+          <option value="out">Pengeluaran (-)</option>
+        </select>
+        <input id="ioNilai" class="input" type="number" placeholder="Nominal" />
+      </div>
+      <input id="ioKet" class="input mt8" placeholder="Keterangan" />
+      <div class="row cols-2 mt8">
+        <button id="ioSave" class="btn primary">Simpan</button>
+        <button id="ioClr" class="btn ghost">Bersihkan</button>
+      </div>
+      <div id="ioList" class="mt16"></div>
+    </div>
+  </section>
+
+  <!-- ===== SETTINGS ===== -->
+  <section id="page-settings" class="grid hidden">
+    <div class="card">
+      <h3 class="title">⚙️ Pengaturan</h3>
+      <details open class="mt8">
+        <summary><b>Profil Toko</b></summary>
+        <div class="inner">
+          <div class="row cols-3">
+            <div><label>Nama Toko</label><input id="pName" class="input" placeholder="cth: Saufi Cell" /></div>
+            <div><label>WhatsApp (opsional)</label><input id="pWa" class="input" placeholder="+62xxxx" /></div>
+            <div><label>Logo (png/jpg)</label><input id="pLogo" class="input" type="file" accept="image/*" /></div>
+          </div>
+          <label class="mt8">Alamat</label>
+          <textarea id="pAddr" class="input" rows="2" placeholder="Alamat toko"></textarea>
+          <div class="row cols-2 mt8">
+            <button id="pSave" class="btn primary">Simpan Profil</button>
+            <button id="pClear" class="btn ghost">Kosongkan</button>
+          </div>
+        </div>
+      </details>
+
+      <details class="mt8">
+        <summary><b>Pengaturan User / Login</b></summary>
+        <div class="inner">
+          <div class="row cols-3">
+            <input id="uPass" class="input" placeholder="Password admin baru" />
+            <select id="uTheme" class="input">
+              <option value="dark">Tema: Dark</option>
+              <option value="light">Tema: Light</option>
+              <option value="auto">Tema: Auto</option>
+            </select>
+            <select id="uFont" class="input">
+              <option value="14">Font: Kecil</option>
+              <option value="15" selected>Font: Sedang</option>
+              <option value="17">Font: Besar</option>
+            </select>
+          </div>
+          <div class="row cols-2 mt8">
+            <button id="uSave" class="btn primary">Simpan User</button>
+            <button id="uLock" class="btn">Kunci Sekarang</button>
+          </div>
+        </div>
+      </details>
+
+      <details class="mt8">
+        <summary><b>Pengaturan Saldo / Akun</b></summary>
+        <div class="inner">
+          <div class="row cols-3">
+            <input id="paName" class="input" placeholder="Nama akun (mis: BRI)" />
+            <input id="paAwal" class="input" type="number" placeholder="Saldo awal" />
+            <input id="paLimit" class="input" type="number" placeholder="Limit (opsional)" />
+          </div>
+          <div class="row cols-3 mt8">
+            <button id="paAdd" class="btn primary">Tambah / Update</button>
+            <button id="paDel" class="btn danger">Hapus</button>
+            <div class="pill right" id="paTotal">Total: Rp 0</div>
+          </div>
+          <div id="paList" class="mt16"></div>
+        </div>
+      </details>
+
+      <details class="mt8">
+        <summary><b>Backup & Restore</b></summary>
+        <div class="inner">
+          <div class="row cols-3">
+            <button id="bkNow" class="btn">⬇️ Backup JSON</button>
+            <button id="rsNow" class="btn">⬆️ Restore JSON</button>
+            <button id="rstAll" class="btn danger">🗑️ Reset Semua Data</button>
+          </div>
+        </div>
+      </details>
+    </div>
+  </section>
+</main>
+
+<!-- Bottom Nav -->
+<nav class="bottomnav" id="nav" aria-label="Navigasi bawah">
+  <a class="tab active" data-go="fisik">📦<div>Fisik</div></a>
+  <a class="tab" data-go="digital">💳<div>Digital</div></a>
+  <a class="tab" data-go="history">📜<div>History</div></a>
+  <a class="tab" data-go="rekap">📈<div>Rekap</div></a>
+</nav>
+
+<!-- Login modal -->
+<div id="lock" style="position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;z-index:100;align-items:center;justify-content:center">
+  <div class="card" style="width:min(420px,92vw)">
+    <h3 class="title">🔒 Login Admin</h3>
+    <input id="pin" class="input" type="password" placeholder="Masukkan PIN" />
+    <div class="row cols-2 mt16">
+      <button id="unlock" class="btn primary">Masuk</button>
+      <button id="toDark" class="btn">Tema Gelap/Terang</button>
+    </div>
+    <div class="sub mt8">PIN default: <b>1234</b> • bisa diubah di Pengaturan › User</div>
+  </div>
+</div>
+<script>
+// ========== DATABASE & STATE (using localStorage) ==========
+const DB = {
+  get: (key, fallback) => {
+    const val = localStorage.getItem(key);
+    if (val === null) return fallback;
+    try {
+      return JSON.parse(val);
+    } catch (e) {
+      return val;
+    }
+  },
+  set: (key, val) => {
+    localStorage.setItem(key, typeof val === 'object' ? JSON.stringify(val) : val);
+  }
+};
+
+
+// ========== BRANDING ==========
+function updateBranding() {
+  const nama = DB.get('profil_nama', 'Kasir Multi Saldo');
+  const logoData = DB.get('profil_logo', null);
+  const alamat = DB.get('profil_alamat', 'Alamat');
+  const wa = DB.get('profil_wa', '');
+
+  // Update header
+  document.getElementById("headerTitle").textContent = nama;
+  const logoBox = document.getElementById("logoBox");
+  if (logoData) {
+    logoBox.innerHTML = `<img src="${logoData}" class="logo" alt="logo">`;
+  } else {
+    logoBox.innerHTML = `<span>🧾</span>`;
+  }
+
+  // Update drawer
+  document.getElementById("shopNameSide").textContent = nama;
+  document.getElementById("shopAddrSide").textContent = alamat;
+  const logoSide = document.getElementById("logoSide");
+  if (logoData) {
+    logoSide.src = logoData;
+    logoSide.style.display = 'block';
+    logoSide.parentElement.style.background = 'var(--card)';
+  } else {
+    logoSide.style.display = 'none';
+    logoSide.parentElement.style.background = 'var(--bg)';
+  }
+
+  // Update rekap page
+  document.getElementById('rkName').textContent = nama;
+  document.getElementById('rkAddr').textContent = `${alamat} • ${wa}`;
+  const rkLogo = document.getElementById('rkLogo');
+  if(logoData) {
+      rkLogo.src = logoData;
+      rkLogo.style.display = 'block';
+  } else {
+      rkLogo.style.display = 'none';
+  }
+}
+
+
+// ========== NAVIGATION ==========
+function showPage(pageId) {
+  if (!pageId) return;
+  // Hide all pages
+  document.querySelectorAll("main > section").forEach(p => {
+    p.classList.add('hidden');
+  });
+
+  // Show target page
+  const targetPage = document.getElementById('page-' + pageId);
+  if (targetPage) {
+    targetPage.classList.remove('hidden');
+  }
+
+  // Update active tab on bottom nav
+  document.querySelectorAll('.bottomnav .tab').forEach(tab => {
+    tab.classList.remove('active');
+    if (tab.dataset.go === pageId) {
+      tab.classList.add('active');
+    }
+  });
+
+  // Close drawer
+  document.getElementById('drawer').classList.remove('open');
+}
+
+
+// ========== INITIALIZATION ==========
+document.addEventListener('DOMContentLoaded', () => {
+  // Set initial page
+  showPage('fisik');
+
+  // Load and apply branding
+  updateBranding();
+
+  // --- NAVIGATION EVENT LISTENERS ---
+  const drawer = document.getElementById('drawer');
+
+  // 1. Bottom Nav
+  document.getElementById('nav').addEventListener('click', (e) => {
+    const target = e.target.closest('a.tab');
+    if (target && target.dataset.go) {
+      e.preventDefault();
+      showPage(target.dataset.go);
+    }
+  });
+
+  // 2. Drawer Open/Close
+  document.getElementById('btnMenu').addEventListener('click', () => {
+    drawer.classList.add('open');
+  });
+  document.getElementById('closeDrawer').addEventListener('click', () => {
+    drawer.classList.remove('open');
+  });
+  document.getElementById('mask').addEventListener('click', () => {
+    drawer.classList.remove('open');
+  });
+
+  // 3. Drawer Menu Links
+  drawer.querySelector('.menu').addEventListener('click', (e) => {
+    const target = e.target.closest('a');
+    if (target && target.dataset.go) {
+      e.preventDefault();
+      showPage(target.dataset.go); // showPage also closes the drawer
+    }
+    // Note: other links like backup/restore will be handled separately
+  });
+
+  // --- PROFILE SETTINGS LOGIC ---
+  const pName = document.getElementById('pName');
+  const pWa = document.getElementById('pWa');
+  const pAddr = document.getElementById('pAddr');
+  const pLogo = document.getElementById('pLogo');
+  const pSave = document.getElementById('pSave');
+  const pClear = document.getElementById('pClear');
+
+  // Load existing settings into the form
+  const loadProfileSettings = () => {
+    pName.value = DB.get('profil_nama', '');
+    pWa.value = DB.get('profil_wa', '');
+    pAddr.value = DB.get('profil_alamat', '');
+  };
+
+  // Save settings
+  pSave.addEventListener('click', () => {
+    DB.set('profil_nama', pName.value);
+    DB.set('profil_wa', pWa.value);
+    DB.set('profil_alamat', pAddr.value);
+
+    const file = pLogo.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        DB.set('profil_logo', e.target.result);
+        updateBranding(); // Update branding after logo is loaded
+        alert('Profil berhasil disimpan (dengan logo baru)!');
+      };
+      reader.readAsDataURL(file);
+    } else {
+      updateBranding(); // Update branding for text changes
+      alert('Profil berhasil disimpan!');
+    }
+  });
+
+  // Clear settings
+  pClear.addEventListener('click', () => {
+    if (!confirm('Anda yakin ingin mengosongkan profil?')) return;
+    pName.value = '';
+    pWa.value = '';
+    pAddr.value = '';
+    pLogo.value = ''; // Clear file input
+    localStorage.removeItem('profil_nama');
+    localStorage.removeItem('profil_wa');
+    localStorage.removeItem('profil_alamat');
+    localStorage.removeItem('profil_logo');
+    updateBranding();
+    alert('Profil telah dikosongkan.');
+  });
+
+  // Initial load of settings into the form when the app starts
+  loadProfileSettings();
+});
+</script>
+</body>
+</html>
