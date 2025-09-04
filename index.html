@@ -118,6 +118,12 @@
   .table th{font-size:12px;color:var(--soft);text-align:left;padding:0 8px}
   .table td{background:var(--card);border:1px solid var(--muted);padding:10px;border-radius:10px}
 
+  .form-grid-2col {
+    display: grid;
+    gap: 12px 20px;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+
   @media (max-width:640px){
     .row.cols-3{grid-template-columns:1fr}
     .row.cols-4{grid-template-columns:1fr 1fr}
@@ -175,72 +181,58 @@
   <section id="page-fisik" class="grid">
     <div class="card">
       <h3 class="title">Transaksi Fisik</h3>
-      <div class="row cols-3">
+
+      <div class="form-grid-2col">
+        <!-- Kolom Kiri -->
+        <div>
+          <label>Kode Barang</label>
+          <div class="row" style="grid-template-columns:1fr auto;align-items:center;">
+            <input id="fKode" class="input" placeholder="Scan / ketik kode" />
+            <button id="btnAuto" title="Ambil dari stok" class="btn" style="padding:12px">↻</button>
+          </div>
+
+          <label class="mt8">Nama Barang</label>
+          <input id="fNama" class="input" placeholder="Otomatis dari stok" readonly />
+
+          <div class="row cols-2 mt8">
+              <div><label>Harga Beli</label><input id="fBeli" class="input" readonly /></div>
+              <div><label>Harga Jual</label><input id="fJual" class="input" readonly /></div>
+          </div>
+        </div>
+
+        <!-- Kolom Kanan -->
         <div>
           <label>Tanggal</label>
           <input id="fDate" class="input" type="date" />
-        </div>
-        <div>
-          <label>Akun Saldo</label>
+
+          <div class="row cols-2 mt8">
+            <div><label>Qty</label><input id="fQty" class="input" type="number" min="1" value="1" /></div>
+            <div><label>Jenis</label>
+              <select id="fJenis" class="input">
+                <option value="jual">Penjualan (stok-, saldo+)</option>
+                <option value="beli">Pembelian (stok+, saldo-)</option>
+                <option value="retur">Retur Beli (stok-, saldo+)</option>
+              </select>
+            </div>
+          </div>
+
+          <label class="mt8">Akun Saldo</label>
           <select id="fAkun" class="input"></select>
         </div>
-        <div>
-          <label>Qty</label>
-          <input id="fQty" class="input" type="number" min="1" value="1" />
-        </div>
       </div>
 
-      <div class="row cols-3 mt8">
-        <div>
-          <label>Kode Barang</label>
-          <input id="fKode" class="input" placeholder="Scan / ketik kode" />
-        </div>
-        <div>
-          <label>Nama Barang</label>
-          <input id="fNama" class="input" placeholder="otomatis dari stok" readonly />
-        </div>
-        <div class="row" style="grid-template-columns:1fr auto;align-items:end">
-          <div>
-            <label>&nbsp;</label>
-            <button id="btnScan" class="btn">📷 Scan</button>
-          </div>
-          <div>
-            <label>&nbsp;</label>
-            <button id="btnAuto" class="btn">↻ Ambil dari stok</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="row cols-3 mt8">
-        <div>
-          <label>Harga Beli</label>
-          <input id="fBeli" class="input" readonly />
-        </div>
-        <div>
-          <label>Harga Jual</label>
-          <input id="fJual" class="input" readonly />
-        </div>
-        <div>
-          <label>Jenis</label>
-          <select id="fJenis" class="input">
-            <option value="beli">Pembelian (stok+, saldo-)</option>
-            <option value="jual">Penjualan (stok-, saldo+)</option>
-            <option value="retur">Retur Beli (stok-, saldo+)</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="row cols-3 mt8">
+      <!-- Stats & Tombol Aksi -->
+      <div class="row cols-3 mt16">
         <div class="stat"><span class="sub">Modal</span><b id="fModal">Rp 0</b></div>
         <div class="stat"><span class="sub">Penjualan</span><b id="fOmzet">Rp 0</b></div>
         <div class="stat"><span class="sub">Laba</span><b id="fLaba">Rp 0</b></div>
       </div>
 
       <div class="row cols-2 mt16">
-        <button id="fSave" class="btn primary">Simpan</button>
+        <button id="fSave" class="btn primary">Simpan Transaksi</button>
         <button id="fClear" class="btn ghost">Bersihkan</button>
       </div>
-      <div class="sub mt8">Harga & nama barang otomatis dari stok; penjualan dicegah bila stok habis.</div>
+      <div class="sub mt8">Nama & harga otomatis dari stok. Penjualan dicegah bila stok habis.</div>
     </div>
   </section>
 
