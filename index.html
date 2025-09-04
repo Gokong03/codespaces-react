@@ -15,10 +15,6 @@ const DB = {
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => document.querySelectorAll(selector);
 
-const formatRupiah = (angka) => {
-  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka || 0);
-};
-
 const State = {
   akun: [],
   stok: [],
@@ -33,36 +29,10 @@ function loadState() {
   State.pengaturan = DB.get('data_pengaturan', { theme: 'dark', font: '15' });
 }
 
-function saveState(key) {
-  const keys = Array.isArray(key) ? key : [key];
-  if (keys.includes('akun')) DB.set('data_akun', State.akun);
-  if (keys.includes('stok')) DB.set('data_stok', State.stok);
-  if (keys.includes('transaksi')) DB.set('data_transaksi', State.transaksi);
-  if (keys.includes('pengaturan')) DB.set('data_pengaturan', State.pengaturan);
-}
-
-function updateBranding() {
-  const nama = DB.get('profil_nama', 'Kasir Multi Saldo');
-  const logoData = DB.get('profil_logo', null);
-  const alamat = DB.get('profil_alamat', 'Alamat');
-  const wa = DB.get('profil_wa', '');
-
-  $("#headerTitle").textContent = nama;
-  const logoBox = $("#logoBox");
-  logoBox.innerHTML = logoData ? `<img src="${logoData}" class="logo" alt="logo">` : `<span>🧾</span>`;
-
-  $("#shopNameSide").textContent = nama;
-  $("#shopAddrSide").textContent = alamat;
-  const logoSide = $("#logoSide");
-  if (logoData) {
-    logoSide.src = logoData;
-    logoSide.style.display = 'block';
-    logoSide.parentElement.style.background = 'var(--card)';
-  } else {
-    logoSide.style.display = 'none';
-    logoSide.parentElement.style.background = 'var(--bg)';
-  }
-}
+// ========== UI RENDER & UPDATE FUNCTIONS ==========
+const formatRupiah = (angka) => {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka || 0);
+};
 
 function showPage(pageId) {
   if (!pageId) return;
@@ -78,31 +48,22 @@ function showPage(pageId) {
 
 // ========== INITIALIZATION ==========
 document.addEventListener('DOMContentLoaded', () => {
+  // --- EVENT LISTENERS ---
+  // Navigation
+  $('#nav').addEventListener('click', (e) => { const t = e.target.closest('a.tab'); if(t && t.dataset.go) { e.preventDefault(); showPage(t.dataset.go); } });
+  $('#btnMenu').addEventListener('click', () => $('#drawer').classList.add('open'));
+  $('#closeDrawer').addEventListener('click', () => $('#drawer').classList.remove('open'));
+  $('#mask').addEventListener('click', () => $('#drawer').classList.remove('open'));
+  $('#drawer .menu').addEventListener('click', (e) => { const t = e.target.closest('a'); if(t && t.dataset.go) { e.preventDefault(); showPage(t.dataset.go); } });
 
-  // --- DEFINE ELEMENTS ---
-  const pName = $('#pName'), pWa = $('#pWa'), pAddr = $('#pAddr'), pLogo = $('#pLogo'), pSave = $('#pSave'), pClear = $('#pClear');
-  const uTheme = $('#uTheme'), uFont = $('#uFont'), uSave = $('#uSave');
-  const bgFile = $('#bgFile'), bgSave = $('#bgSave'), bgClear = $('#bgClear');
+  // --- INITIAL LOAD & EXECUTION ---
   const paName = $('#paName'), paAwal = $('#paAwal'), paLimit = $('#paLimit'), paAdd = $('#paAdd'), paDel = $('#paDel'), paList = $('#paList'), paTotal = $('#paTotal');
-
-  // --- LOGIC & RENDER FUNCTIONS ---
-  function updateAkunDropdowns() {
-    const dropdowns = $$('#fAkun, #dAkun, #hAkun, #rAkun, #ioAkun');
-    let accountOptions = State.akun.map(akun => `<option value="${akun.nama}">${akun.nama}</option>`).join('');
-    if(State.akun.length === 0) accountOptions = '<option>Buat akun dulu</option>';
-    dropdowns.forEach(dd => {
-      const currentValue = dd.value;
-      dd.innerHTML = accountOptions;
-      if (currentValue && State.akun.some(a => a.nama === currentValue)) dd.value = currentValue;
-    });
-  }
 
   function renderAkunList() {
     paList.innerHTML = '';
     if (State.akun.length === 0) {
       paList.innerHTML = '<div class="sub">Belum ada akun.</div>';
       paTotal.textContent = 'Total: Rp 0';
-      updateAkunDropdowns();
       return;
     }
     const table = document.createElement('table');
@@ -120,73 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     paList.appendChild(table);
     paTotal.textContent = `Total: ${formatRupiah(totalSaldo)}`;
-    updateAkunDropdowns();
   }
-
-  function applyBackground() {
-      const bgData = DB.get('app_background', null);
-      document.body.style.backgroundImage = bgData ? `url(${bgData})` : 'none';
-      if(bgData) {
-        document.body.style.backgroundSize = 'cover';
-        document.body.style.backgroundPosition = 'center';
-        document.body.style.backgroundAttachment = 'fixed';
-      }
-  }
-
-  function applyPengaturan() {
-    const theme = State.pengaturan.theme;
-    document.documentElement.dataset.theme = theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme;
-    document.body.style.fontSize = State.pengaturan.font + 'px';
-  }
-
-  function loadPengaturanForm() {
-    uTheme.value = State.pengaturan.theme;
-    uFont.value = State.pengaturan.font;
-  }
-
-  function loadProfileSettings() {
-    pName.value = DB.get('profil_nama', '');
-    pWa.value = DB.get('profil_wa', '');
-    pAddr.value = DB.get('profil_alamat', '');
-  };
-
-  // --- EVENT LISTENERS ---
-  $('#nav').addEventListener('click', (e) => { const t = e.target.closest('a.tab'); if(t && t.dataset.go) { e.preventDefault(); showPage(t.dataset.go); } });
-  $('#btnMenu').addEventListener('click', () => $('#drawer').classList.add('open'));
-  $('#closeDrawer').addEventListener('click', () => $('#drawer').classList.remove('open'));
-  $('#mask').addEventListener('click', () => $('#drawer').classList.remove('open'));
-  $('#drawer .menu').addEventListener('click', (e) => { const t = e.target.closest('a'); if(t && t.dataset.go) { e.preventDefault(); showPage(t.dataset.go); } });
-
-  pSave.addEventListener('click', () => {
-    DB.set('profil_nama', pName.value); DB.set('profil_wa', pWa.value); DB.set('profil_alamat', pAddr.value);
-    const file = pLogo.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => { DB.set('profil_logo', e.target.result); updateBranding(); alert('Profil berhasil disimpan!'); };
-      reader.readAsDataURL(file);
-    } else { updateBranding(); alert('Profil berhasil disimpan!'); }
-  });
-  pClear.addEventListener('click', () => {
-    if (!confirm('Anda yakin?')) return;
-    pName.value = ''; pWa.value = ''; pAddr.value = ''; pLogo.value = '';
-    ['profil_nama', 'profil_wa', 'profil_alamat', 'profil_logo'].forEach(k => localStorage.removeItem(k));
-    updateBranding(); alert('Profil dikosongkan.');
-  });
-
-  uSave.addEventListener('click', () => {
-    State.pengaturan.theme = uTheme.value; State.pengaturan.font = uFont.value;
-    saveState('pengaturan'); applyPengaturan(); alert('Pengaturan user disimpan!');
-  });
-  bgSave.addEventListener('click', () => {
-      const file = bgFile.files[0]; if (!file) { alert('Pilih file gambar.'); return; }
-      if (file.size > 2 * 1024 * 1024) { alert('Ukuran gambar maks 2MB.'); return; }
-      const reader = new FileReader();
-      reader.onload = (e) => { DB.set('app_background', e.target.result); applyBackground(); alert('Background disimpan!'); };
-      reader.readAsDataURL(file);
-  });
-  bgClear.addEventListener('click', () => {
-      if (confirm('Hapus background?')) { localStorage.removeItem('app_background'); applyBackground(); bgFile.value = ''; }
-  });
 
   paAdd.addEventListener('click', () => {
     const nama = paName.value.trim(); const saldo = parseInt(paAwal.value) || 0; const limit = parseInt(paLimit.value) || 0;
@@ -194,23 +89,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const existingIdx = State.akun.findIndex(a => a.nama.toLowerCase() === nama.toLowerCase());
     if (existingIdx > -1) { State.akun[existingIdx].saldo = saldo; State.akun[existingIdx].limit = limit; }
     else { State.akun.push({ nama, saldo, limit }); }
-    saveState('akun'); renderAkunList(); paName.value = ''; paAwal.value = ''; paLimit.value = '';
+    DB.set('data_akun', State.akun); // saveState partial
+    renderAkunList();
+    paName.value = ''; paAwal.value = ''; paLimit.value = '';
   });
+
   paDel.addEventListener('click', () => {
     const nama = paName.value.trim(); if (!nama) { alert('Isi nama akun.'); return; }
     const initialLength = State.akun.length;
     State.akun = State.akun.filter(a => a.nama.toLowerCase() !== nama.toLowerCase());
     if (State.akun.length === initialLength) { alert(`Akun "${nama}" tidak ditemukan.`); }
-    else { saveState('akun'); renderAkunList(); paName.value = ''; paAwal.value = ''; paLimit.value = ''; }
+    else { DB.set('data_akun', State.akun); renderAkunList(); paName.value = ''; paAwal.value = ''; paLimit.value = ''; }
   });
+
   paList.addEventListener('click', (e) => {
     const row = e.target.closest('tr'); if (!row) return;
     const akun = State.akun.find(a => a.nama === row.dataset.nama);
     if (akun) { paName.value = akun.nama; paAwal.value = akun.saldo; paLimit.value = akun.limit || ''; }
   });
 
-  // --- INITIAL LOAD & EXECUTION ---
-  // Stock & Physical Tx functions
+  // Stock Management
+  const tKode = $('#tKode'), tNama = $('#tNama'), tBeli = $('#tBeli'), tJual = $('#tJual'), tQty = $('#tQty'), tAdd = $('#tAdd'), tDel = $('#tDel'), tList = $('#tList');
+
   function renderStokList() {
     tList.innerHTML = '';
     if (State.stok.length === 0) {
@@ -230,6 +130,35 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     tList.appendChild(table);
   }
+
+  tAdd.addEventListener('click', () => {
+      const kode = tKode.value.trim().toUpperCase(), nama = tNama.value.trim(), beli = parseInt(tBeli.value) || 0, jual = parseInt(tJual.value) || 0, qty = parseInt(tQty.value) || 0;
+      if (!kode || !nama) { alert('Kode dan Nama barang tidak boleh kosong.'); return; }
+      const existingIdx = State.stok.findIndex(s => s.kode === kode);
+      if (existingIdx > -1) {
+          const item = State.stok[existingIdx]; item.nama = nama; item.beli = beli; item.jual = jual;
+          if (qty > 0) item.qty += qty;
+      } else {
+          if (qty <= 0) { alert('Stok awal harus lebih dari 0 untuk barang baru.'); return; }
+          State.stok.push({ kode, nama, beli, jual, qty });
+      }
+      DB.set('data_stok', State.stok); renderStokList(); tKode.value = ''; tNama.value = ''; tBeli.value = ''; tJual.value = ''; tQty.value = ''; tQty.placeholder = 'Stok Awal / Tambah';
+  });
+  tDel.addEventListener('click', () => {
+      const kode = tKode.value.trim().toUpperCase(); if (!kode) { alert('Isi kode barang yang ingin dihapus.'); return; }
+      const initialLength = State.stok.length; State.stok = State.stok.filter(s => s.kode !== kode);
+      if (State.stok.length === initialLength) { alert(`Barang dengan kode "${kode}" tidak ditemukan.`); }
+      else { DB.set('data_stok', State.stok); renderStokList(); tKode.value = ''; tNama.value = ''; tBeli.value = ''; tJual.value = ''; tQty.value = ''; tQty.placeholder = 'Stok Awal / Tambah'; }
+  });
+  tList.addEventListener('click', (e) => {
+      const row = e.target.closest('tr'); if (!row) return;
+      const item = State.stok.find(s => s.kode === row.dataset.kode);
+      if (item) { tKode.value = item.kode; tNama.value = item.nama; tBeli.value = item.beli; tJual.value = item.jual; tQty.value = ''; tQty.placeholder = `Stok ada: ${item.qty}. Isi untuk menambah.`; }
+  });
+
+  // Physical Transactions
+  const fDate = $('#fDate'), fAkun = $('#fAkun'), fQty = $('#fQty'), fKode = $('#fKode'), fNama = $('#fNama'), fBtnAuto = $('#btnAuto'), fBeli = $('#fBeli'), fJual = $('#fJual'), fJenis = $('#fJenis'), fModal = $('#fModal'), fOmzet = $('#fOmzet'), fLaba = $('#fLaba'), fSave = $('#fSave'), fClear = $('#fClear');
+  let currentItem = null;
 
   function findAndFillItem() {
       const kode = fKode.value.trim().toUpperCase();
@@ -260,38 +189,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function clearFisikForm() {
+      const getTodayDate = () => new Date().toISOString().split('T')[0];
       currentItem = null; fKode.value = ''; fNama.value = ''; fBeli.value = ''; fJual.value = '';
       fQty.value = '1'; fJenis.value = 'jual'; fDate.value = getTodayDate();
       updateFisikStats(); fKode.focus();
   }
 
-  // Stock & Physical Tx listeners
-  tAdd.addEventListener('click', () => {
-      const kode = tKode.value.trim().toUpperCase(), nama = tNama.value.trim(), beli = parseInt(tBeli.value) || 0, jual = parseInt(tJual.value) || 0, qty = parseInt(tQty.value) || 0;
-      if (!kode || !nama) { alert('Kode dan Nama barang tidak boleh kosong.'); return; }
-      const existingIdx = State.stok.findIndex(s => s.kode === kode);
-      if (existingIdx > -1) {
-          const item = State.stok[existingIdx]; item.nama = nama; item.beli = beli; item.jual = jual;
-          if (qty > 0) item.qty += qty;
-          alert(`Stok untuk "${kode}" berhasil diupdate.`);
-      } else {
-          if (qty <= 0) { alert('Stok awal harus lebih dari 0 untuk barang baru.'); return; }
-          State.stok.push({ kode, nama, beli, jual, qty });
-          alert(`Barang baru "${kode}" berhasil ditambahkan.`);
-      }
-      saveState('stok'); renderStokList(); tKode.value = ''; tNama.value = ''; tBeli.value = ''; tJual.value = ''; tQty.value = ''; tQty.placeholder = 'Stok Awal / Tambah';
-  });
-  tDel.addEventListener('click', () => {
-      const kode = tKode.value.trim().toUpperCase(); if (!kode) { alert('Isi kode barang yang ingin dihapus.'); return; }
-      const initialLength = State.stok.length; State.stok = State.stok.filter(s => s.kode !== kode);
-      if (State.stok.length === initialLength) { alert(`Barang dengan kode "${kode}" tidak ditemukan.`); }
-      else { saveState('stok'); renderStokList(); tKode.value = ''; tNama.value = ''; tBeli.value = ''; tJual.value = ''; tQty.value = ''; tQty.placeholder = 'Stok Awal / Tambah'; alert(`Barang "${kode}" berhasil dihapus.`); }
-  });
-  tList.addEventListener('click', (e) => {
-      const row = e.target.closest('tr'); if (!row) return;
-      const item = State.stok.find(s => s.kode === row.dataset.kode);
-      if (item) { tKode.value = item.kode; tNama.value = item.nama; tBeli.value = item.beli; tJual.value = item.jual; tQty.value = ''; tQty.placeholder = `Stok ada: ${item.qty}. Isi untuk menambah.`; }
-  });
   fKode.addEventListener('change', findAndFillItem);
   fBtnAuto.addEventListener('click', findAndFillItem);
   [fQty, fJual, fBeli].forEach(el => el.addEventListener('input', updateFisikStats));
@@ -311,9 +214,14 @@ document.addEventListener('DOMContentLoaded', () => {
       else if (jenis === 'retur') { State.stok[itemIndex].qty -= qty; saldoChange = modal; }
       State.akun[akunIndex].saldo += saldoChange;
       State.transaksi.unshift({ id: 'trx' + Date.now(), tanggal: fDate.value, jenis: 'fisik', tipe: jenis, kode: currentItem.kode, nama: currentItem.nama, qty: qty, hargaBeli: beli, hargaJual: jual, laba: omzet - modal, total: jenis === 'beli' ? -modal : omzet, akun: akunName });
-      saveState(['stok', 'akun', 'transaksi']);
-      alert('Transaksi berhasil disimpan!'); renderStokList(); renderAkunList(); clearFisikForm();
+      DB.set('data_stok', State.stok);
+      DB.set('data_akun', State.akun);
+      DB.set('data_transaksi', State.transaksi);
+      renderStokList(); renderAkunList(); clearFisikForm();
   });
+
+  // Digital Transactions
+  const dDate = $('#dDate'), dAkun = $('#dAkun'), dJenis = $('#dJenis'), dBeli = $('#dBeli'), dJual = $('#dJual'), dLaba = $('#dLaba'), dPokok = $('#dPokok'), dFee = $('#dFee'), dDesc = $('#dDesc'), dSave = $('#dSave'), dClear = $('#dClear'), dModeJualBeli = $('#dModeJualBeli'), dModeTarik = $('#dModeTarik');
 
   function handleDigitalModeChange() {
       const mode = dJenis.value;
@@ -326,31 +234,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function clearDigitalForm() {
+      const getTodayDate = () => new Date().toISOString().split('T')[0];
       dJenis.value = 'jual'; dBeli.value = '0'; dJual.value = '0'; dPokok.value = '0';
       dFee.value = '0'; dDesc.value = ''; dDate.value = getTodayDate();
       updateDigitalLaba(); handleDigitalModeChange();
-  }
-
-  function initHistoryPage() {
-      hTo.value = getTodayDate(); hFrom.style.display = 'none';
-      hScope.addEventListener('change', () => { hFrom.style.display = hScope.value === 'custom' ? 'block' : 'none'; renderHistory(); });
-      [hAkun, hFrom, hTo, hSearch].forEach(el => el.addEventListener('input', renderHistory));
-      hClear.addEventListener('click', () => { hScope.value = 'month'; hTo.value = getTodayDate(); hFrom.value = ''; hAkun.value = 'semua'; hSearch.value = ''; hFrom.style.display = 'none'; renderHistory(); });
-      renderHistory();
-  }
-
-  function initRekapPage() {
-      rDate.value = getTodayDate();
-      [rDate, rAkun].forEach(el => el.addEventListener('input', renderRekap));
-      rkSeg.addEventListener('click', (e) => {
-          if (e.target.tagName === 'BUTTON') {
-              rkSeg.querySelector('.on').classList.remove('on');
-              e.target.classList.add('on');
-              renderRekap();
-          }
-      });
-      new MutationObserver((mutations) => { if (!mutations[0].target.classList.contains('hidden')) { updateBranding(); renderRekap(); } }).observe($('#page-rekap'), { attributes: true });
-      renderRekap();
   }
 
   dJenis.addEventListener('change', handleDigitalModeChange);
@@ -376,16 +263,125 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       State.akun[akunIndex].saldo += saldoChange;
       State.transaksi.unshift({ id: 'trx' + Date.now(), tanggal: dDate.value, jenis: 'digital', tipe: jenis, deskripsi: desc, laba: laba, total: total, akun: akunName, detail: detail });
-      saveState(['akun', 'transaksi']);
-      alert('Transaksi digital berhasil disimpan!'); renderAkunList(); clearDigitalForm();
+      DB.set('data_akun', State.akun);
+      DB.set('data_transaksi', State.transaksi);
+      renderAkunList(); clearDigitalForm();
   });
 
+  // Reporting
+  const hScope = $('#hScope'), hAkun = $('#hAkun'), hFrom = $('#hFrom'), hTo = $('#hTo'), hSearch = $('#hSearch'), hClear = $('#hClear'), hSum = $('#hSum'), hList = $('#hList');
+  const rkSeg = $('#rkSeg'), rDate = $('#rDate'), rAkun = $('#rAkun'), rkBody = $('#rkBody'), rkTitle = $('#rkTitle');
+
+  function renderHistory() {
+      let filtered = [...State.transaksi];
+      const akun = hAkun.value;
+      if (akun && akun !== 'semua') {
+          filtered = filtered.filter(t => t.akun === akun);
+      }
+      const toDate = new Date(hTo.value + 'T23:59:59');
+      let fromDate;
+      const scope = hScope.value;
+      if (scope === 'day') fromDate = new Date(hTo.value + 'T00:00:00');
+      else if (scope === 'week') { fromDate = new Date(toDate); fromDate.setDate(toDate.getDate() - 6); fromDate.setHours(0,0,0,0); }
+      else if (scope === 'month') fromDate = new Date(toDate.getFullYear(), toDate.getMonth(), 1);
+      else if (scope === 'custom') {
+          if (!hFrom.value) { hList.innerHTML = '<div class="sub">Pilih tanggal awal.</div>'; return; }
+          fromDate = new Date(hFrom.value + 'T00:00:00');
+      }
+      if (scope !== 'all') {
+          filtered = filtered.filter(t => { const d = new Date(t.tanggal); return d >= fromDate && d <= toDate; });
+      }
+      const term = hSearch.value.trim().toLowerCase();
+      if (term) {
+          filtered = filtered.filter(t => (t.kode && t.kode.toLowerCase().includes(term)) || (t.nama && t.nama.toLowerCase().includes(term)) || (t.deskripsi && t.deskripsi.toLowerCase().includes(term)));
+      }
+      hList.innerHTML = '';
+      if (filtered.length === 0) {
+          hList.innerHTML = '<div class="sub">Tidak ada transaksi.</div>';
+          hSum.textContent = 'Total: Rp 0';
+          return;
+      }
+      let totalSum = 0;
+      filtered.forEach(t => {
+          const div = document.createElement('div');
+          div.className = 'card mt8';
+          const isIncome = t.total >= 0;
+          const totalColor = isIncome ? 'var(--accent)' : 'var(--danger)';
+          let title = t.jenis === 'fisik' ? `(${t.tipe}) ${t.nama} (${t.qty}x)` : `(${t.tipe}) ${t.deskripsi}`;
+          div.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:flex-start;"><div><b>${title}</b><div class="sub">${t.tanggal} • Akun: ${t.akun}</div></div><div style="text-align:right"><b style="color:${totalColor}">${formatRupiah(t.total)}</b><div class="sub">Laba: ${formatRupiah(t.laba)}</div></div></div>`;
+          hList.appendChild(div);
+          totalSum += t.total;
+      });
+      hSum.textContent = `Total Arus Kas: ${formatRupiah(totalSum)}`;
+  }
+
+  function renderRekap() {
+      let filtered = [...State.transaksi];
+      const akun = rAkun.value;
+      if (akun && akun !== 'semua') filtered = filtered.filter(t => t.akun === akun);
+
+      const date = new Date(rDate.value + 'T12:00:00');
+      const scope = rkSeg.querySelector('.on').dataset.s;
+      let fromDate, toDate;
+      if (scope === 'day') {
+          fromDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0,0,0,0);
+          toDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23,59,59,999);
+          rkTitle.value = `Rekap Harian: ${rDate.value}`;
+      } else if (scope === 'week') {
+          const dayOfWeek = date.getDay();
+          fromDate = new Date(date.setDate(date.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1)));
+          fromDate.setHours(0,0,0,0);
+          toDate = new Date(fromDate);
+          toDate.setDate(fromDate.getDate() + 6);
+          toDate.setHours(23,59,59,999);
+          rkTitle.value = `Rekap Mingguan: ${fromDate.toISOString().slice(0,10)} s/d ${toDate.toISOString().slice(0,10)}`;
+      } else {
+          fromDate = new Date(date.getFullYear(), date.getMonth(), 1);
+          toDate = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
+          rkTitle.value = `Rekap Bulanan: ${date.toLocaleString('id-ID', { month: 'long', year: 'numeric' })}`;
+      }
+      filtered = filtered.filter(t => { const d = new Date(t.tanggal); return d >= fromDate && d <= toDate; });
+
+      let totalOmzet = 0, totalModal = 0, totalLaba = 0;
+      filtered.forEach(t => {
+          totalLaba += t.laba;
+          if (t.jenis === 'fisik' && t.tipe === 'jual') { totalOmzet += t.total; totalModal += (t.hargaBeli * t.qty); }
+          else if (t.jenis === 'digital' && t.tipe === 'jual') { totalOmzet += t.total; totalModal += t.detail.hargaBeli || 0; }
+      });
+
+      if (filtered.length === 0) { rkBody.innerHTML = 'Tidak ada data transaksi untuk periode ini.'; return; }
+      rkBody.innerHTML = `<div class="row cols-3"><div class="stat"><span>Total Omzet</span><b>${formatRupiah(totalOmzet)}</b></div><div class="stat"><span>Total Modal</span><b>${formatRupiah(totalModal)}</b></div><div class="stat"><span>Total Laba</span><b>${formatRupiah(totalLaba)}</b></div></div><div class="sub mt12">${filtered.length} transaksi tercatat.</div>`;
+  }
+
+  function initHistoryPage() {
+      hTo.value = getTodayDate(); hFrom.style.display = 'none';
+      const allOption = document.createElement('option');
+      allOption.value = 'semua';
+      allOption.textContent = 'Semua Akun';
+      hAkun.prepend(allOption);
+      hScope.addEventListener('change', () => { hFrom.style.display = hScope.value === 'custom' ? 'block' : 'none'; renderHistory(); });
+      [hAkun, hFrom, hTo, hSearch].forEach(el => el.addEventListener('input', renderHistory));
+      hClear.addEventListener('click', () => { hScope.value = 'month'; hTo.value = getTodayDate(); hFrom.value = ''; hAkun.value = 'semua'; hSearch.value = ''; hFrom.style.display = 'none'; renderHistory(); });
+  }
+
+  function initRekapPage() {
+      rDate.value = getTodayDate();
+      const allOption = document.createElement('option');
+      allOption.value = 'semua';
+      allOption.textContent = 'Semua Akun';
+      rAkun.prepend(allOption);
+      [rDate, rAkun].forEach(el => el.addEventListener('input', renderRekap));
+      rkSeg.addEventListener('click', (e) => {
+          if (e.target.tagName === 'BUTTON') {
+              rkSeg.querySelector('.on').classList.remove('on');
+              e.target.classList.add('on');
+              renderRekap();
+          }
+      });
+      new MutationObserver((mutations) => { if (!mutations[0].target.classList.contains('hidden')) { updateBranding(); renderRekap(); } }).observe($('#page-rekap'), { attributes: true });
+  }
+
   loadState();
-  applyBackground();
-  updateBranding();
-  loadProfileSettings();
-  loadPengaturanForm();
-  applyPengaturan();
   renderAkunList();
   renderStokList();
   clearFisikForm();
@@ -395,5 +391,3 @@ document.addEventListener('DOMContentLoaded', () => {
   showPage('fisik');
 });
 </script>
-</body>
-</html>
