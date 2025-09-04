@@ -512,11 +512,12 @@
     <div class="sub mt8">PIN default: <b>1234</b> • bisa diubah di Pengaturan › User</div>
   </div>
 </div>
-
 <script>
 // ========== GLOBAL HELPERS & STATE ==========
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => document.querySelectorAll(selector);
+const getTodayDate = () => new Date().toISOString().split('T')[0];
+const formatRupiah = (angka) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka || 0);
 
 const DB = {
   get: (key, fallback) => {
@@ -524,9 +525,7 @@ const DB = {
     if (val === null) return fallback;
     try { return JSON.parse(val); } catch (e) { return val; }
   },
-  set: (key, val) => {
-    localStorage.setItem(key, typeof val === 'object' ? JSON.stringify(val) : val);
-  }
+  set: (key, val) => localStorage.setItem(key, typeof val === 'object' ? JSON.stringify(val) : val)
 };
 
 const State = {
@@ -535,59 +534,6 @@ const State = {
   transaksi: [],
   pengaturan: { theme: 'dark', font: '15' }
 };
-
-const formatRupiah = (angka) => {
-  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka || 0);
-};
-
-const getTodayDate = () => new Date().toISOString().split('T')[0];
-
-// ========== GLOBAL UI FUNCTIONS ==========
-function showPage(pageId) {
-  if (!pageId) return;
-  $$("main > section").forEach(p => p.classList.add('hidden'));
-  const targetPage = $('#page-' + pageId);
-  if (targetPage) targetPage.classList.remove('hidden');
-  $$('.bottomnav .tab').forEach(tab => tab.classList.toggle('active', tab.dataset.go === pageId));
-  $('#drawer').classList.remove('open');
-}
-
-function updateBranding() {
-  const nama = DB.get('profil_nama', 'Kasir Multi Saldo');
-  const logoData = DB.get('profil_logo', null);
-  const alamat = DB.get('profil_alamat', 'Alamat');
-  const wa = DB.get('profil_wa', '');
-  $("#headerTitle").textContent = nama;
-  $("#logoBox").innerHTML = logoData ? `<img src="${logoData}" class="logo" alt="logo">` : `<span>🧾</span>`;
-  $("#shopNameSide").textContent = nama;
-  $("#shopAddrSide").textContent = alamat;
-  const logoSide = $("#logoSide");
-  if (logoData) {
-    logoSide.src = logoData;
-    logoSide.style.display = 'block';
-    logoSide.parentElement.style.background = 'var(--card)';
-  } else {
-    logoSide.style.display = 'none';
-    logoSide.parentElement.style.background = 'var(--bg)';
-  }
-  $('#rkName').textContent = nama;
-  $('#rkAddr').textContent = `${alamat} • ${wa}`;
-  const rkLogo = $('#rkLogo');
-  rkLogo.src = logoData || '';
-  rkLogo.style.display = logoData ? 'block' : 'none';
-}
-
-function applyBackground() {
-    const bgData = DB.get('app_background', null);
-    if (bgData) { document.body.style.backgroundImage = `url(${bgData})`; document.body.style.backgroundSize = 'cover'; document.body.style.backgroundPosition = 'center'; document.body.style.backgroundAttachment = 'fixed'; }
-    else { document.body.style.backgroundImage = 'none'; }
-}
-
-function applyPengaturan() {
-  const theme = State.pengaturan.theme;
-  document.documentElement.dataset.theme = theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme;
-  document.body.style.fontSize = State.pengaturan.font + 'px';
-}
 
 // ========== MAIN APP LOGIC ==========
 document.addEventListener('DOMContentLoaded', () => {
@@ -604,6 +550,64 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentItem = null;
 
   // --- RENDER & LOGIC FUNCTIONS ---
+  function loadState() {
+    State.akun = DB.get('data_akun', []);
+    State.stok = DB.get('data_stok', []);
+    State.transaksi = DB.get('data_transaksi', []);
+    State.pengaturan = DB.get('data_pengaturan', { theme: 'dark', font: '15' });
+  }
+
+  function saveState(key) {
+    const keys = Array.isArray(key) ? key : [key];
+    if (keys.includes('akun')) DB.set('data_akun', State.akun);
+    if (keys.includes('stok')) DB.set('data_stok', State.stok);
+    if (keys.includes('transaksi')) DB.set('data_transaksi', State.transaksi);
+    if (keys.includes('pengaturan')) DB.set('data_pengaturan', State.pengaturan);
+  }
+
+  function showPage(pageId) {
+    if (!pageId) return;
+    $$("main > section").forEach(p => p.classList.add('hidden'));
+    const targetPage = $('#page-' + pageId);
+    if (targetPage) targetPage.classList.remove('hidden');
+    $$('.bottomnav .tab').forEach(tab => tab.classList.toggle('active', tab.dataset.go === pageId));
+    $('#drawer').classList.remove('open');
+  }
+
+  function updateBranding() {
+    const nama = DB.get('profil_nama', 'Kasir Multi Saldo');
+    const logoData = DB.get('profil_logo', null);
+    const alamat = DB.get('profil_alamat', 'Alamat');
+    const wa = DB.get('profil_wa', '');
+    $("#headerTitle").textContent = nama;
+    $("#logoBox").innerHTML = logoData ? `<img src="${logoData}" class="logo" alt="logo">` : `<span>🧾</span>`;
+    $("#shopNameSide").textContent = nama;
+    $("#shopAddrSide").textContent = alamat;
+    const logoSide = $("#logoSide");
+    if (logoData) { logoSide.src = logoData; logoSide.style.display = 'block'; logoSide.parentElement.style.background = 'var(--card)'; }
+    else { logoSide.style.display = 'none'; logoSide.parentElement.style.background = 'var(--bg)'; }
+    $('#rkName').textContent = nama;
+    $('#rkAddr').textContent = `${alamat} • ${wa}`;
+    const rkLogo = $('#rkLogo');
+    rkLogo.src = logoData || '';
+    rkLogo.style.display = logoData ? 'block' : 'none';
+  }
+
+  function applyBackground() {
+      const bgData = DB.get('app_background', null);
+      if (bgData) { document.body.style.backgroundImage = `url(${bgData})`; document.body.style.backgroundSize = 'cover'; document.body.style.backgroundPosition = 'center'; document.body.style.backgroundAttachment = 'fixed'; }
+      else { document.body.style.backgroundImage = 'none'; }
+  }
+
+  function applyPengaturan() {
+    const theme = State.pengaturan.theme;
+    document.documentElement.dataset.theme = theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme;
+    document.body.style.fontSize = State.pengaturan.font + 'px';
+  }
+
+  function loadPengaturanForm() { uTheme.value = State.pengaturan.theme; uFont.value = State.pengaturan.font; }
+  function loadProfileSettings() { pName.value = DB.get('profil_nama', ''); pWa.value = DB.get('profil_wa', ''); pAddr.value = DB.get('profil_alamat', ''); };
+
   function updateAkunDropdowns() {
     const dropdowns = $$('#fAkun, #dAkun, #hAkun, #rAkun, #ioAkun');
     const allAccountsOption = '<option value="semua">Semua Akun</option>';
@@ -616,6 +620,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (currentValue && State.akun.some(a => a.nama === currentValue)) dd.value = currentValue;
     });
   }
+
   function renderAkunList() {
     paList.innerHTML = '';
     if (State.akun.length === 0) { paList.innerHTML = '<div class="sub">Belum ada akun.</div>'; paTotal.textContent = 'Total: Rp 0'; updateAkunDropdowns(); return; }
@@ -636,6 +641,7 @@ document.addEventListener('DOMContentLoaded', () => {
     paTotal.textContent = `Total: ${formatRupiah(totalSaldo)}`;
     updateAkunDropdowns();
   }
+
   function renderStokList() {
     tList.innerHTML = '';
     if (State.stok.length === 0) { tList.innerHTML = '<div class="sub">Belum ada barang di stok.</div>'; return; }
@@ -652,6 +658,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     tList.appendChild(table);
   }
+
   function renderHistory() {
       let filtered = [...State.transaksi];
       const akun = hAkun.value;
@@ -684,6 +691,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       hSum.textContent = `Total Arus Kas: ${formatRupiah(totalSum)}`;
   }
+
   function renderRekap() {
       let filtered = [...State.transaksi];
       const akun = rAkun.value;
@@ -718,8 +726,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (filtered.length === 0) { rkBody.innerHTML = 'Tidak ada data transaksi untuk periode ini.'; return; }
       rkBody.innerHTML = `<div class="row cols-3"><div class="stat"><span>Total Omzet</span><b>${formatRupiah(totalOmzet)}</b></div><div class="stat"><span>Total Modal</span><b>${formatRupiah(totalModal)}</b></div><div class="stat"><span>Total Laba</span><b>${formatRupiah(totalLaba)}</b></div></div><div class="sub mt12">${filtered.length} transaksi tercatat.</div>`;
   }
-  function loadPengaturanForm() { uTheme.value = State.pengaturan.theme; uFont.value = State.pengaturan.font; }
-  function loadProfileSettings() { pName.value = DB.get('profil_nama', ''); pWa.value = DB.get('profil_wa', ''); pAddr.value = DB.get('profil_alamat', ''); };
+
   function findAndFillItem() {
       const kode = fKode.value.trim().toUpperCase(); if (!kode) return;
       const item = State.stok.find(s => s.kode === kode);
@@ -736,6 +743,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function handleDigitalModeChange() { const mode = dJenis.value; dModeJualBeli.classList.toggle('hidden', mode === 'tarik'); dModeTarik.classList.toggle('hidden', mode !== 'tarik'); }
   function updateDigitalLaba() { dLaba.textContent = formatRupiah((parseInt(dJual.value) || 0) - (parseInt(dBeli.value) || 0)); }
   function clearDigitalForm() { dJenis.value = 'jual'; dBeli.value = '0'; dJual.value = '0'; dPokok.value = '0'; dFee.value = '0'; dDesc.value = ''; dDate.value = getTodayDate(); updateDigitalLaba(); handleDigitalModeChange(); }
+
   function initHistoryPage() {
       hTo.value = getTodayDate(); hFrom.style.display = 'none';
       const allOption = document.createElement('option'); allOption.value = 'semua'; allOption.textContent = 'Semua Akun'; hAkun.prepend(allOption);
