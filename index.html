@@ -1,5 +1,523 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kasir Offline — Multi Saldo (Tema Biru)</title>
+<style>
+  :root{
+    /* Palet gelap – nuansa biru */
+    --bg:#0b1020;            /* latar belakang */
+    --card:#131a2b;          /* kartu/panel */
+    --muted:#1a2338;         /* border / permukaan sekunder */
+    --text:#e7eeff;          /* teks utama */
+    --soft:#9fb0d2;          /* teks sekunder */
+    --primary:#3a86ff;       /* biru utama */
+    --primary-ink:#07122a;   /* teks di atas primary */
+    --accent:#7cc4ff;        /* aksen */
+    --danger:#ff6b6b;
+    --warn:#ffd166;
+    --ink:#0b1220;
+    --radius:14px;
+  }
+
+  /* Tema terang */
+  [data-theme="light"]{
+    --bg:#f6f8ff;
+    --card:#ffffff;
+    --muted:#e7ecf7;
+    --text:#0d1630;
+    --soft:#5b6a86;
+    --primary:#1e63ff;
+    --primary-ink:#ffffff;
+    --accent:#2d7dff;
+    --ink:#ffffff;
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--text);
+    font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial
+  }
+  a{color:inherit;text-decoration:none}
+
+  .appbar{
+    position:sticky;top:0;z-index:50;display:flex;gap:10px;align-items:center;
+    padding:12px 14px;
+    background:linear-gradient(180deg,rgba(11,16,32,.92),rgba(11,16,32,.5));
+    backdrop-filter:saturate(140%) blur(6px);
+    border-bottom:1px solid var(--muted)
+  }
+
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;border:1px solid transparent;
+    background:var(--muted);color:var(--text);padding:10px 14px;border-radius:12px;cursor:pointer
+  }
+  .btn.primary{background:var(--primary);color:var(--primary-ink)}
+  .btn.ghost{background:transparent;border-color:var(--muted)}
+  .btn.warn{background:var(--warn);color:#2c2200}
+  .btn.danger{background:var(--danger);color:#2a0000}
+
+  .wrap{padding:14px}
+  .grid{display:grid;gap:12px}
+  .card{background:var(--card);border:1px solid var(--muted);border-radius:var(--radius);padding:16px}
+  .title{font-weight:700;font-size:18px;margin:0 0 10px}
+  .sub{color:var(--soft);font-size:12px}
+
+  .input, select, textarea{
+    width:100%;border:1px solid var(--muted);background:#0f172a;color:var(--text);
+    padding:12px 12px;border-radius:12px;outline:none
+  }
+  [data-theme="light"] .input,[data-theme="light"] select,[data-theme="light"] textarea{background:#fff;color:#111}
+  label{display:block;margin:8px 0 6px;color:var(--soft);font-size:13px}
+
+  .row{display:grid;gap:10px}
+  .row.cols-2{grid-template-columns:1fr 1fr}
+  .row.cols-3{grid-template-columns:1fr 1fr 1fr}
+  .row.cols-4{grid-template-columns:repeat(4,1fr)}
+
+  .pill{
+    display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;
+    background:var(--muted);font-size:13px
+  }
+
+  .stat{display:flex;flex-direction:column;gap:4px;padding:8px 10px;border:1px solid var(--muted);border-radius:10px;background:var(--card);text-align:center}
+  .stat b{font-size:17px}
+
+  .drawer{position:fixed;inset:0 0 0 0;display:none;z-index:60}
+  .drawer.open{display:flex}
+  .drawer .mask{flex:1;background:rgba(0,0,0,.45)}
+  .drawer .panel{width:min(86vw,380px);height:100%;background:var(--card);border-right:1px solid var(--muted);padding:16px;overflow:auto}
+  .menu a{display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px}
+  .menu a:hover{background:var(--muted)}
+
+  .bottomnav{
+    position:fixed;bottom:0;left:0;right:0;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+    padding:10px;background:linear-gradient(0deg,var(--bg),rgba(0,0,0,0));
+    border-top:1px solid var(--muted)
+  }
+  .bottomnav .tab{
+    display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px;border-radius:12px;border:1px solid var(--muted);
+    background:var(--card);font-size:12px
+  }
+  .bottomnav .tab.active{outline:2px solid var(--primary); box-shadow:0 0 0 3px rgba(58,134,255,.15) inset}
+
+  main{padding-bottom:86px}
+  .avatar{width:42px;height:42px;border-radius:12px;border:1px solid var(--muted);background:#0b1220;display:grid;place-items:center;overflow:hidden}
+  img.logo{max-width:100%;max-height:40px;display:block}
+  .hidden{display:none}
+  .right{margin-left:auto}
+  .mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.mt24{margin-top:24px}
+
+  .seg{display:inline-grid;grid-auto-flow:column;gap:6px;background:var(--muted);padding:6px;border-radius:999px}
+  .seg button{border:none;background:transparent;padding:8px 12px;border-radius:999px;color:var(--soft);cursor:pointer}
+  .seg .on{background:var(--card);color:var(--text);border:1px solid var(--muted);box-shadow:0 0 0 2px rgba(58,134,255,.15) inset}
+
+  .table{width:100%;border-collapse:separate;border-spacing:0 8px}
+  .table th{font-size:12px;color:var(--soft);text-align:left;padding:0 8px}
+  .table td{background:var(--card);border:1px solid var(--muted);padding:10px;border-radius:10px}
+
+  .form-grid-2col {
+    display: grid;
+    gap: 12px 20px;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+
+  @media (max-width:640px){
+    .row.cols-3{grid-template-columns:1fr}
+    .row.cols-4{grid-template-columns:1fr 1fr}
+  }
+</style>
+</head>
+<body>
+<header class="appbar">
+  <button class="btn" id="btnMenu" aria-label="Menu">☰</button>
+  <div class="avatar" id="logoBox" aria-hidden="true"><span>🧾</span></div>
+  <div>
+    <div id="headerTitle" style="font-weight:700">Kasir Multi Saldo</div>
+    <div class="sub" id="appMode">Offline • localStorage</div>
+  </div>
+  <span class="right"></span>
+  <span class="pill" id="whoami">👤 Admin</span>
+</header>
+
+<!-- Drawer / Burger -->
+<div class="drawer" id="drawer" aria-hidden="true">
+  <div class="panel">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <div class="avatar" style="width:50px;height:50px"><img id="logoSide" class="logo" alt=""></div>
+      <div>
+        <b id="shopNameSide">Nama Toko</b>
+        <div class="sub" id="shopAddrSide">Alamat</div>
+      </div>
+      <span class="right"></span>
+      <button class="btn" id="closeDrawer" aria-label="Tutup">✕</button>
+    </div>
+    <nav class="menu">
+      <a href="#" data-go="fisik">📦 Transaksi Fisik</a>
+      <a href="#" data-go="digital">💳 Transaksi Digital</a>
+      <a href="#" data-go="history">📜 History</a>
+      <a href="#" data-go="rekap">📈 Rekap</a>
+      <hr style="border-color:var(--muted)">
+      <a href="#" data-go="saldo">💼 Saldo Akun</a>
+      <a href="#" data-go="stok">🏷️ Stok Barang</a>
+      <a href="#" data-go="audit">🧮 Audit Stok</a>
+      <a href="#" data-go="inout">💸 Pemasukan & Pengeluaran</a>
+      <a href="#" data-go="settings">⚙️ Pengaturan</a>
+      <hr style="border-color:var(--muted)">
+      <a href="#" id="doBackup">⬇️ Backup (JSON)</a>
+      <a href="#" id="doRestore">⬆️ Restore (JSON)</a>
+      <a href="#" id="doReset" style="color:#ff9a9a">🗑️ Reset Semua</a>
+      <hr style="border-color:var(--muted)">
+      <a href="#" id="doLock">🔒 Logout / Kunci</a>
+    </nav>
+  </div>
+  <div class="mask" id="mask" role="button" tabindex="0" aria-label="Tutup menu"></div>
+</div>
+
+<main id="view" class="wrap grid">
+  <!-- ===== FISIK ===== -->
+  <section id="page-fisik" class="grid">
+    <div class="card">
+      <h3 class="title">Transaksi Fisik</h3>
+
+      <div class="form-grid-2col">
+        <!-- Kolom Kiri -->
+        <div>
+          <label>Kode Barang</label>
+          <div class="row" style="grid-template-columns:1fr auto;align-items:center;">
+            <input id="fKode" class="input" placeholder="Scan / ketik kode" />
+            <button id="btnAuto" title="Ambil dari stok" class="btn" style="padding:12px">↻</button>
+          </div>
+
+          <label class="mt8">Nama Barang</label>
+          <input id="fNama" class="input" placeholder="Otomatis dari stok" readonly />
+
+          <div class="row cols-2 mt8">
+              <div><label>Harga Beli</label><input id="fBeli" class="input" readonly /></div>
+              <div><label>Harga Jual</label><input id="fJual" class="input" readonly /></div>
+          </div>
+        </div>
+
+        <!-- Kolom Kanan -->
+        <div>
+          <label>Tanggal</label>
+          <input id="fDate" class="input" type="date" />
+
+          <div class="row cols-2 mt8">
+            <div><label>Qty</label><input id="fQty" class="input" type="number" min="1" value="1" /></div>
+            <div><label>Jenis</label>
+              <select id="fJenis" class="input">
+                <option value="jual">Penjualan (stok-, saldo+)</option>
+                <option value="beli">Pembelian (stok+, saldo-)</option>
+                <option value="retur">Retur Beli (stok-, saldo+)</option>
+              </select>
+            </div>
+          </div>
+
+          <label class="mt8">Akun Saldo</label>
+          <select id="fAkun" class="input"></select>
+        </div>
+      </div>
+
+      <!-- Stats & Tombol Aksi -->
+      <div class="row cols-3 mt16">
+        <div class="stat"><span class="sub">Modal</span><b id="fModal">Rp 0</b></div>
+        <div class="stat"><span class="sub">Penjualan</span><b id="fOmzet">Rp 0</b></div>
+        <div class="stat"><span class="sub">Laba</span><b id="fLaba">Rp 0</b></div>
+      </div>
+
+      <div class="row cols-2 mt16">
+        <button id="fSave" class="btn primary">Simpan Transaksi</button>
+        <button id="fClear" class="btn ghost">Bersihkan</button>
+      </div>
+      <div class="sub mt8">Nama & harga otomatis dari stok. Penjualan dicegah bila stok habis.</div>
+    </div>
+  </section>
+
+  <!-- ===== DIGITAL ===== -->
+  <section id="page-digital" class="grid hidden">
+    <div class="card">
+      <h3 class="title">Transaksi Digital</h3>
+      <div class="row cols-3">
+        <div><label>Tanggal</label><input id="dDate" class="input" type="date" /></div>
+        <div><label>Akun Saldo</label><select id="dAkun" class="input"></select></div>
+        <div><label>Jenis</label>
+          <select id="dJenis" class="input">
+            <option value="jual">Penjualan</option>
+            <option value="beli">Pembelian</option>
+            <option value="tarik">Jasa (Tarik/Transfer)</option>
+          </select>
+        </div>
+      </div>
+      <div id="dInputs">
+        <div class="row cols-3 mt8" id="dModeJualBeli">
+          <div><label>Harga Beli (Modal)</label><input id="dBeli" class="input" type="number" value="0" /></div>
+          <div><label>Harga Jual (Omzet)</label><input id="dJual" class="input" type="number" value="0" /></div>
+          <div><label>Laba</label><div class="stat" style="padding: 12px;"><b id="dLaba">Rp 0</b></div></div>
+        </div>
+        <div class="row cols-2 mt8 hidden" id="dModeTarik">
+          <div><label>Jumlah Pokok</label><input id="dPokok" class="input" type="number" value="0" /></div>
+          <div><label>Fee / Biaya Admin</label><input id="dFee" class="input" type="number" value="0" /></div>
+        </div>
+      </div>
+      <label class="mt8">Deskripsi</label>
+      <input id="dDesc" class="input" placeholder="Keterangan (opsional)" />
+      <div class="row cols-2 mt16">
+        <button id="dSave" class="btn primary">Simpan</button>
+        <button id="dClear" class="btn ghost">Bersihkan</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== HISTORY ===== -->
+  <section id="page-history" class="grid hidden">
+    <div class="card">
+      <h3 class="title">History Transaksi</h3>
+      <div class="row cols-4" style="grid-template-columns:repeat(4,1fr)">
+        <select id="hScope" class="input">
+          <option value="day">Harian</option>
+          <option value="week">Mingguan</option>
+          <option value="month" selected>Bulanan</option>
+          <option value="custom">Custom</option>
+          <option value="all">Semua</option>
+        </select>
+        <select id="hAkun" class="input"></select>
+        <input id="hFrom" class="input" type="date" />
+        <input id="hTo" class="input" type="date" />
+      </div>
+      <div class="row cols-3 mt8">
+        <input id="hSearch" class="input" placeholder="Cari (kode/nama/akun/deskripsi)" />
+        <button id="hClear" class="btn">Bersihkan Filter</button>
+        <div class="pill right" id="hSum">Total: Rp 0</div>
+      </div>
+      <div id="hList" class="mt16"></div>
+    </div>
+  </section>
+
+  <!-- ===== REKAP ===== -->
+  <section id="page-rekap" class="grid hidden">
+    <div class="card">
+      <h3 class="title">Rekap</h3>
+      <div class="seg" id="rkSeg">
+        <button data-s="day" class="on">Harian</button>
+        <button data-s="week">Mingguan</button>
+        <button data-s="month">Bulanan</button>
+      </div>
+      <div class="row cols-3 mt12">
+        <input id="rDate" class="input" type="date" />
+        <select id="rAkun" class="input"></select>
+        <div class="row" style="grid-template-columns:1fr auto auto;align-items:center">
+          <input id="rkTitle" class="input" placeholder="Judul / periode (editable)" />
+          <button class="btn" id="btnShare">Bagikan PNG</button>
+          <button class="btn" id="btnPrint">Print</button>
+        </div>
+      </div>
+
+      <div id="rkEditable" class="card mt12">
+        <div style="display:flex;gap:12px;align-items:center">
+          <div class="avatar"><img id="rkLogo" class="logo" alt=""></div>
+          <div>
+            <b id="rkName">Nama Usaha</b>
+            <div class="sub" id="rkAddr">Alamat • WA</div>
+          </div>
+        </div>
+        <hr style="border-color:var(--muted);margin:12px 0" />
+        <div id="rkBody">Belum ada data.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SALDO ===== -->
+  <section id="page-saldo" class="grid hidden">
+    <div class="card">
+      <h3 class="title">Akun Saldo</h3>
+      <div class="row cols-3">
+        <input id="sName" class="input" placeholder="Nama akun (mis: BRI)" />
+        <input id="sAwal" class="input" type="number" placeholder="Saldo sekarang" />
+        <input id="sLimit" class="input" type="number" placeholder="Limit (opsional)" />
+      </div>
+      <div class="row cols-3 mt8">
+        <button id="sAdd" class="btn primary">Tambah / Update</button>
+        <button id="sDel" class="btn danger">Hapus</button>
+        <div class="pill right" id="sumSaldo">Total: Rp 0</div>
+      </div>
+      <div id="sList" class="mt16"></div>
+    </div>
+  </section>
+
+  <!-- ===== STOK ===== -->
+  <section id="page-stok" class="grid hidden">
+    <div class="card">
+      <h3 class="title">Stok Barang</h3>
+      <div class="row cols-4">
+        <input id="tKode" class="input" placeholder="KODE" />
+        <input id="tNama" class="input" placeholder="Nama" />
+        <input id="tBeli" class="input" type="number" placeholder="H.Beli" />
+        <input id="tJual" class="input" type="number" placeholder="H.Jual" />
+      </div>
+      <div class="row cols-3 mt8">
+        <input id="tQty" class="input" type="number" placeholder="Stok Awal / Tambah" />
+        <button id="tAdd" class="btn primary">Tambah / Update</button>
+        <button id="tDel" class="btn danger">Hapus</button>
+      </div>
+      <div id="tList" class="mt16"></div>
+    </div>
+  </section>
+
+  <!-- ===== AUDIT ===== -->
+  <section id="page-audit" class="grid hidden">
+    <div class="card">
+      <h3 class="title">Audit Stok</h3>
+      <div class="row cols-3">
+        <input id="aKode" class="input" placeholder="KODE" />
+        <input id="aReal" class="input" type="number" placeholder="Stok fisik (hitung nyata)" />
+        <button id="aApply" class="btn primary">Simpan Audit</button>
+      </div>
+      <div class="row cols-2 mt8">
+        <button id="aPrint" class="btn">Print Audit</button>
+        <button id="aShare" class="btn">Share PNG</button>
+      </div>
+      <div id="aInfo" class="mt16 sub">Masukkan kode & stok fisik untuk menyesuaikan selisih.</div>
+      <div id="aList" class="mt16"></div>
+    </div>
+  </section>
+
+  <!-- ===== IN/OUT ===== -->
+  <section id="page-inout" class="grid hidden">
+    <div class="card">
+      <h3 class="title">Pemasukan & Pengeluaran</h3>
+      <div class="row cols-4" style="grid-template-columns:repeat(4,1fr)">
+        <input id="ioDate" class="input" type="date" />
+        <select id="ioAkun" class="input"></select>
+        <select id="ioJenis" class="input">
+          <option value="in">Pemasukan (+)</option>
+          <option value="out">Pengeluaran (-)</option>
+        </select>
+        <input id="ioNilai" class="input" type="number" placeholder="Nominal" />
+      </div>
+      <input id="ioKet" class="input mt8" placeholder="Keterangan" />
+      <div class="row cols-2 mt8">
+        <button id="ioSave" class="btn primary">Simpan</button>
+        <button id="ioClr" class="btn ghost">Bersihkan</button>
+      </div>
+      <div id="ioList" class="mt16"></div>
+    </div>
+  </section>
+
+  <!-- ===== SETTINGS ===== -->
+  <section id="page-settings" class="grid hidden">
+    <div class="card">
+      <h3 class="title">⚙️ Pengaturan</h3>
+      <details open class="mt8">
+        <summary><b>Profil Toko</b></summary>
+        <div class="inner">
+          <div class="row cols-3">
+            <div><label>Nama Toko</label><input id="pName" class="input" placeholder="cth: Saufi Cell" /></div>
+            <div><label>WhatsApp (opsional)</label><input id="pWa" class="input" placeholder="+62xxxx" /></div>
+            <div><label>Logo (png/jpg)</label><input id="pLogo" class="input" type="file" accept="image/*" /></div>
+          </div>
+          <label class="mt8">Alamat</label>
+          <textarea id="pAddr" class="input" rows="2" placeholder="Alamat toko"></textarea>
+          <div class="row cols-2 mt8">
+            <button id="pSave" class="btn primary">Simpan Profil</button>
+            <button id="pClear" class="btn ghost">Kosongkan</button>
+          </div>
+        </div>
+      </details>
+
+      <details class="mt8">
+        <summary><b>Pengaturan User / Login</b></summary>
+        <div class="inner">
+          <div class="row cols-3">
+            <input id="uPass" class="input" placeholder="Password admin baru" />
+            <select id="uTheme" class="input">
+              <option value="dark">Tema: Dark</option>
+              <option value="light">Tema: Light</option>
+              <option value="auto">Tema: Auto</option>
+            </select>
+            <select id="uFont" class="input">
+              <option value="14">Font: Kecil</option>
+              <option value="15" selected>Font: Sedang</option>
+              <option value="17">Font: Besar</option>
+            </select>
+          </div>
+          <div class="row cols-2 mt8">
+            <button id="uSave" class="btn primary">Simpan User</button>
+            <button id="uLock" class="btn">Kunci Sekarang</button>
+          </div>
+
+      <hr style="border-color:var(--muted);margin:16px 0">
+      <label>Ganti Background (opsional)</label>
+      <div class="row" style="grid-template-columns: 2fr 1fr; gap: 8px; align-items:center;">
+          <input id="bgFile" class="input" type="file" accept="image/*" />
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <button id="bgSave" class="btn primary">Simpan</button>
+              <button id="bgClear" class="btn danger">Hapus</button>
+          </div>
+      </div>
+      <div class="sub mt8">Pilih gambar untuk dijadikan latar belakang aplikasi (maks 2MB).</div>
+        </div>
+      </details>
+
+      <details class="mt8">
+        <summary><b>Pengaturan Saldo / Akun</b></summary>
+        <div class="inner">
+          <div class="row cols-3">
+            <input id="paName" class="input" placeholder="Nama akun (mis: BRI)" />
+            <input id="paAwal" class="input" type="number" placeholder="Saldo awal" />
+            <input id="paLimit" class="input" type="number" placeholder="Limit (opsional)" />
+          </div>
+          <div class="row cols-3 mt8">
+            <button id="paAdd" class="btn primary">Tambah / Update</button>
+            <button id="paDel" class="btn danger">Hapus</button>
+            <div class="pill right" id="paTotal">Total: Rp 0</div>
+          </div>
+          <div id="paList" class="mt16"></div>
+        </div>
+      </details>
+
+      <details class="mt8">
+        <summary><b>Backup & Restore</b></summary>
+        <div class="inner">
+          <div class="row cols-3">
+            <button id="bkNow" class="btn">⬇️ Backup JSON</button>
+            <button id="rsNow" class="btn">⬆️ Restore JSON</button>
+            <button id="rstAll" class="btn danger">🗑️ Reset Semua Data</button>
+          </div>
+        </div>
+      </details>
+    </div>
+  </section>
+</main>
+
+<!-- Bottom Nav -->
+<nav class="bottomnav" id="nav" aria-label="Navigasi bawah">
+  <a class="tab active" data-go="fisik">📦<div>Fisik</div></a>
+  <a class="tab" data-go="digital">💳<div>Digital</div></a>
+  <a class="tab" data-go="history">📜<div>History</div></a>
+  <a class="tab" data-go="rekap">📈<div>Rekap</div></a>
+</nav>
+
+<!-- Login modal -->
+<div id="lock" style="position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;z-index:100;align-items:center;justify-content:center">
+  <div class="card" style="width:min(420px,92vw)">
+    <h3 class="title">🔒 Login Admin</h3>
+    <input id="pin" class="input" type="password" placeholder="Masukkan PIN" />
+    <div class="row cols-2 mt16">
+      <button id="unlock" class="btn primary">Masuk</button>
+      <button id="toDark" class="btn">Tema Gelap/Terang</button>
+    </div>
+    <div class="sub mt8">PIN default: <b>1234</b> • bisa diubah di Pengaturan › User</div>
+  </div>
+</div>
+
 <script>
-// ========== DATABASE & STATE (using localStorage) ==========
+// ========== GLOBAL HELPERS & STATE ==========
+const $ = (selector) => document.querySelector(selector);
+const $$ = (selector) => document.querySelectorAll(selector);
+
 const DB = {
   get: (key, fallback) => {
     const val = localStorage.getItem(key);
@@ -11,10 +529,6 @@ const DB = {
   }
 };
 
-// ========== APP HELPERS & STATE ==========
-const $ = (selector) => document.querySelector(selector);
-const $$ = (selector) => document.querySelectorAll(selector);
-
 const State = {
   akun: [],
   stok: [],
@@ -22,50 +536,89 @@ const State = {
   pengaturan: { theme: 'dark', font: '15' }
 };
 
-function loadState() {
-  State.akun = DB.get('data_akun', []);
-  State.stok = DB.get('data_stok', []);
-  State.transaksi = DB.get('data_transaksi', []);
-  State.pengaturan = DB.get('data_pengaturan', { theme: 'dark', font: '15' });
-}
-
-// ========== UI RENDER & UPDATE FUNCTIONS ==========
 const formatRupiah = (angka) => {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka || 0);
 };
 
+const getTodayDate = () => new Date().toISOString().split('T')[0];
+
+// ========== GLOBAL UI FUNCTIONS ==========
 function showPage(pageId) {
   if (!pageId) return;
   $$("main > section").forEach(p => p.classList.add('hidden'));
   const targetPage = $('#page-' + pageId);
   if (targetPage) targetPage.classList.remove('hidden');
-
-  $$('.bottomnav .tab').forEach(tab => {
-    tab.classList.toggle('active', tab.dataset.go === pageId);
-  });
+  $$('.bottomnav .tab').forEach(tab => tab.classList.toggle('active', tab.dataset.go === pageId));
   $('#drawer').classList.remove('open');
 }
 
-// ========== INITIALIZATION ==========
+function updateBranding() {
+  const nama = DB.get('profil_nama', 'Kasir Multi Saldo');
+  const logoData = DB.get('profil_logo', null);
+  const alamat = DB.get('profil_alamat', 'Alamat');
+  const wa = DB.get('profil_wa', '');
+  $("#headerTitle").textContent = nama;
+  $("#logoBox").innerHTML = logoData ? `<img src="${logoData}" class="logo" alt="logo">` : `<span>🧾</span>`;
+  $("#shopNameSide").textContent = nama;
+  $("#shopAddrSide").textContent = alamat;
+  const logoSide = $("#logoSide");
+  if (logoData) {
+    logoSide.src = logoData;
+    logoSide.style.display = 'block';
+    logoSide.parentElement.style.background = 'var(--card)';
+  } else {
+    logoSide.style.display = 'none';
+    logoSide.parentElement.style.background = 'var(--bg)';
+  }
+  $('#rkName').textContent = nama;
+  $('#rkAddr').textContent = `${alamat} • ${wa}`;
+  const rkLogo = $('#rkLogo');
+  rkLogo.src = logoData || '';
+  rkLogo.style.display = logoData ? 'block' : 'none';
+}
+
+function applyBackground() {
+    const bgData = DB.get('app_background', null);
+    if (bgData) { document.body.style.backgroundImage = `url(${bgData})`; document.body.style.backgroundSize = 'cover'; document.body.style.backgroundPosition = 'center'; document.body.style.backgroundAttachment = 'fixed'; }
+    else { document.body.style.backgroundImage = 'none'; }
+}
+
+function applyPengaturan() {
+  const theme = State.pengaturan.theme;
+  document.documentElement.dataset.theme = theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme;
+  document.body.style.fontSize = State.pengaturan.font + 'px';
+}
+
+// ========== MAIN APP LOGIC ==========
 document.addEventListener('DOMContentLoaded', () => {
-  // --- EVENT LISTENERS ---
-  // Navigation
-  $('#nav').addEventListener('click', (e) => { const t = e.target.closest('a.tab'); if(t && t.dataset.go) { e.preventDefault(); showPage(t.dataset.go); } });
-  $('#btnMenu').addEventListener('click', () => $('#drawer').classList.add('open'));
-  $('#closeDrawer').addEventListener('click', () => $('#drawer').classList.remove('open'));
-  $('#mask').addEventListener('click', () => $('#drawer').classList.remove('open'));
-  $('#drawer .menu').addEventListener('click', (e) => { const t = e.target.closest('a'); if(t && t.dataset.go) { e.preventDefault(); showPage(t.dataset.go); } });
-
-  // --- INITIAL LOAD & EXECUTION ---
+  // --- DEFINE ALL ELEMENTS ---
+  const pName = $('#pName'), pWa = $('#pWa'), pAddr = $('#pAddr'), pLogo = $('#pLogo'), pSave = $('#pSave'), pClear = $('#pClear');
+  const uTheme = $('#uTheme'), uFont = $('#uFont'), uSave = $('#uSave');
+  const bgFile = $('#bgFile'), bgSave = $('#bgSave'), bgClear = $('#bgClear');
   const paName = $('#paName'), paAwal = $('#paAwal'), paLimit = $('#paLimit'), paAdd = $('#paAdd'), paDel = $('#paDel'), paList = $('#paList'), paTotal = $('#paTotal');
+  const tKode = $('#tKode'), tNama = $('#tNama'), tBeli = $('#tBeli'), tJual = $('#tJual'), tQty = $('#tQty'), tAdd = $('#tAdd'), tDel = $('#tDel'), tList = $('#tList');
+  const fDate = $('#fDate'), fAkun = $('#fAkun'), fQty = $('#fQty'), fKode = $('#fKode'), fNama = $('#fNama'), fBtnAuto = $('#btnAuto'), fBeli = $('#fBeli'), fJual = $('#fJual'), fJenis = $('#fJenis'), fModal = $('#fModal'), fOmzet = $('#fOmzet'), fLaba = $('#fLaba'), fSave = $('#fSave'), fClear = $('#fClear');
+  const dDate = $('#dDate'), dAkun = $('#dAkun'), dJenis = $('#dJenis'), dBeli = $('#dBeli'), dJual = $('#dJual'), dLaba = $('#dLaba'), dPokok = $('#dPokok'), dFee = $('#dFee'), dDesc = $('#dDesc'), dSave = $('#dSave'), dClear = $('#dClear'), dModeJualBeli = $('#dModeJualBeli'), dModeTarik = $('#dModeTarik');
+  const hScope = $('#hScope'), hAkun = $('#hAkun'), hFrom = $('#hFrom'), hTo = $('#hTo'), hSearch = $('#hSearch'), hClear = $('#hClear'), hSum = $('#hSum'), hList = $('#hList');
+  const rkSeg = $('#rkSeg'), rDate = $('#rDate'), rAkun = $('#rAkun'), rkBody = $('#rkBody'), rkTitle = $('#rkTitle');
+  let currentItem = null;
 
+  // --- RENDER & LOGIC FUNCTIONS ---
+  function updateAkunDropdowns() {
+    const dropdowns = $$('#fAkun, #dAkun, #hAkun, #rAkun, #ioAkun');
+    const allAccountsOption = '<option value="semua">Semua Akun</option>';
+    let accountOptions = State.akun.map(akun => `<option value="${akun.nama}">${akun.nama}</option>`).join('');
+    if(State.akun.length === 0) accountOptions = '<option>Buat akun dulu</option>';
+    dropdowns.forEach(dd => {
+      const currentValue = dd.value;
+      if(dd.id === 'hAkun' || dd.id === 'rAkun') { dd.innerHTML = allAccountsOption + accountOptions; }
+      else { dd.innerHTML = accountOptions; }
+      if (currentValue && State.akun.some(a => a.nama === currentValue)) dd.value = currentValue;
+    });
+  }
   function renderAkunList() {
     paList.innerHTML = '';
-    if (State.akun.length === 0) {
-      paList.innerHTML = '<div class="sub">Belum ada akun.</div>';
-      paTotal.textContent = 'Total: Rp 0';
-      return;
-    }
+    if (State.akun.length === 0) { paList.innerHTML = '<div class="sub">Belum ada akun.</div>'; paTotal.textContent = 'Total: Rp 0'; updateAkunDropdowns(); return; }
     const table = document.createElement('table');
     table.className = 'table';
     table.innerHTML = `<thead><tr><th>Nama Akun</th><th>Saldo</th><th>Limit</th></tr></thead><tbody></tbody>`;
@@ -81,42 +634,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     paList.appendChild(table);
     paTotal.textContent = `Total: ${formatRupiah(totalSaldo)}`;
+    updateAkunDropdowns();
   }
-
-  paAdd.addEventListener('click', () => {
-    const nama = paName.value.trim(); const saldo = parseInt(paAwal.value) || 0; const limit = parseInt(paLimit.value) || 0;
-    if (!nama) { alert('Nama akun tidak boleh kosong.'); return; }
-    const existingIdx = State.akun.findIndex(a => a.nama.toLowerCase() === nama.toLowerCase());
-    if (existingIdx > -1) { State.akun[existingIdx].saldo = saldo; State.akun[existingIdx].limit = limit; }
-    else { State.akun.push({ nama, saldo, limit }); }
-    DB.set('data_akun', State.akun); // saveState partial
-    renderAkunList();
-    paName.value = ''; paAwal.value = ''; paLimit.value = '';
-  });
-
-  paDel.addEventListener('click', () => {
-    const nama = paName.value.trim(); if (!nama) { alert('Isi nama akun.'); return; }
-    const initialLength = State.akun.length;
-    State.akun = State.akun.filter(a => a.nama.toLowerCase() !== nama.toLowerCase());
-    if (State.akun.length === initialLength) { alert(`Akun "${nama}" tidak ditemukan.`); }
-    else { DB.set('data_akun', State.akun); renderAkunList(); paName.value = ''; paAwal.value = ''; paLimit.value = ''; }
-  });
-
-  paList.addEventListener('click', (e) => {
-    const row = e.target.closest('tr'); if (!row) return;
-    const akun = State.akun.find(a => a.nama === row.dataset.nama);
-    if (akun) { paName.value = akun.nama; paAwal.value = akun.saldo; paLimit.value = akun.limit || ''; }
-  });
-
-  // Stock Management
-  const tKode = $('#tKode'), tNama = $('#tNama'), tBeli = $('#tBeli'), tJual = $('#tJual'), tQty = $('#tQty'), tAdd = $('#tAdd'), tDel = $('#tDel'), tList = $('#tList');
-
   function renderStokList() {
     tList.innerHTML = '';
-    if (State.stok.length === 0) {
-      tList.innerHTML = '<div class="sub">Belum ada barang di stok.</div>';
-      return;
-    }
+    if (State.stok.length === 0) { tList.innerHTML = '<div class="sub">Belum ada barang di stok.</div>'; return; }
     const table = document.createElement('table');
     table.className = 'table';
     table.innerHTML = `<thead><tr><th>Kode</th><th>Nama</th><th>H. Beli</th><th>H. Jual</th><th>Stok</th></tr></thead><tbody></tbody>`;
@@ -130,154 +652,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     tList.appendChild(table);
   }
-
-  tAdd.addEventListener('click', () => {
-      const kode = tKode.value.trim().toUpperCase(), nama = tNama.value.trim(), beli = parseInt(tBeli.value) || 0, jual = parseInt(tJual.value) || 0, qty = parseInt(tQty.value) || 0;
-      if (!kode || !nama) { alert('Kode dan Nama barang tidak boleh kosong.'); return; }
-      const existingIdx = State.stok.findIndex(s => s.kode === kode);
-      if (existingIdx > -1) {
-          const item = State.stok[existingIdx]; item.nama = nama; item.beli = beli; item.jual = jual;
-          if (qty > 0) item.qty += qty;
-      } else {
-          if (qty <= 0) { alert('Stok awal harus lebih dari 0 untuk barang baru.'); return; }
-          State.stok.push({ kode, nama, beli, jual, qty });
-      }
-      DB.set('data_stok', State.stok); renderStokList(); tKode.value = ''; tNama.value = ''; tBeli.value = ''; tJual.value = ''; tQty.value = ''; tQty.placeholder = 'Stok Awal / Tambah';
-  });
-  tDel.addEventListener('click', () => {
-      const kode = tKode.value.trim().toUpperCase(); if (!kode) { alert('Isi kode barang yang ingin dihapus.'); return; }
-      const initialLength = State.stok.length; State.stok = State.stok.filter(s => s.kode !== kode);
-      if (State.stok.length === initialLength) { alert(`Barang dengan kode "${kode}" tidak ditemukan.`); }
-      else { DB.set('data_stok', State.stok); renderStokList(); tKode.value = ''; tNama.value = ''; tBeli.value = ''; tJual.value = ''; tQty.value = ''; tQty.placeholder = 'Stok Awal / Tambah'; }
-  });
-  tList.addEventListener('click', (e) => {
-      const row = e.target.closest('tr'); if (!row) return;
-      const item = State.stok.find(s => s.kode === row.dataset.kode);
-      if (item) { tKode.value = item.kode; tNama.value = item.nama; tBeli.value = item.beli; tJual.value = item.jual; tQty.value = ''; tQty.placeholder = `Stok ada: ${item.qty}. Isi untuk menambah.`; }
-  });
-
-  // Physical Transactions
-  const fDate = $('#fDate'), fAkun = $('#fAkun'), fQty = $('#fQty'), fKode = $('#fKode'), fNama = $('#fNama'), fBtnAuto = $('#btnAuto'), fBeli = $('#fBeli'), fJual = $('#fJual'), fJenis = $('#fJenis'), fModal = $('#fModal'), fOmzet = $('#fOmzet'), fLaba = $('#fLaba'), fSave = $('#fSave'), fClear = $('#fClear');
-  let currentItem = null;
-
-  function findAndFillItem() {
-      const kode = fKode.value.trim().toUpperCase();
-      if (!kode) return;
-      const item = State.stok.find(s => s.kode === kode);
-      if (item) {
-          currentItem = item;
-          fNama.value = item.nama;
-          fBeli.value = item.beli;
-          fJual.value = item.jual;
-          fQty.focus();
-      } else {
-          currentItem = null;
-          fNama.value = '';
-          fBeli.value = '';
-          fJual.value = '';
-          alert('Barang tidak ditemukan di stok.');
-      }
-      updateFisikStats();
-  }
-
-  function updateFisikStats() {
-      const qty = parseInt(fQty.value) || 0, beli = parseInt(fBeli.value) || 0, jual = parseInt(fJual.value) || 0;
-      const modal = beli * qty, omzet = jual * qty, laba = omzet - modal;
-      fModal.textContent = formatRupiah(modal);
-      fOmzet.textContent = formatRupiah(omzet);
-      fLaba.textContent = formatRupiah(laba);
-  }
-
-  function clearFisikForm() {
-      const getTodayDate = () => new Date().toISOString().split('T')[0];
-      currentItem = null; fKode.value = ''; fNama.value = ''; fBeli.value = ''; fJual.value = '';
-      fQty.value = '1'; fJenis.value = 'jual'; fDate.value = getTodayDate();
-      updateFisikStats(); fKode.focus();
-  }
-
-  fKode.addEventListener('change', findAndFillItem);
-  fBtnAuto.addEventListener('click', findAndFillItem);
-  [fQty, fJual, fBeli].forEach(el => el.addEventListener('input', updateFisikStats));
-  fClear.addEventListener('click', clearFisikForm);
-  fSave.addEventListener('click', () => {
-      if (!currentItem) { alert('Pilih barang dari stok (ketik kode lalu enter).'); return; }
-      const akunName = fAkun.value; if (!akunName || State.akun.length === 0) { alert('Pilih akun saldo.'); return; }
-      const qty = parseInt(fQty.value); if (!qty || qty <= 0) { alert('Kuantitas harus lebih dari 0.'); return; }
-      const jenis = fJenis.value;
-      const itemIndex = State.stok.findIndex(s => s.kode === currentItem.kode);
-      const akunIndex = State.akun.findIndex(a => a.nama === akunName);
-      if ((jenis === 'jual' || jenis === 'retur') && State.stok[itemIndex].qty < qty) { alert(`Stok tidak cukup. Sisa stok: ${State.stok[itemIndex].qty}`); return; }
-      const beli = parseInt(fBeli.value), jual = parseInt(fJual.value), modal = beli * qty, omzet = jual * qty;
-      let saldoChange = 0;
-      if (jenis === 'jual') { State.stok[itemIndex].qty -= qty; saldoChange = omzet; }
-      else if (jenis === 'beli') { State.stok[itemIndex].qty += qty; saldoChange = -modal; }
-      else if (jenis === 'retur') { State.stok[itemIndex].qty -= qty; saldoChange = modal; }
-      State.akun[akunIndex].saldo += saldoChange;
-      State.transaksi.unshift({ id: 'trx' + Date.now(), tanggal: fDate.value, jenis: 'fisik', tipe: jenis, kode: currentItem.kode, nama: currentItem.nama, qty: qty, hargaBeli: beli, hargaJual: jual, laba: omzet - modal, total: jenis === 'beli' ? -modal : omzet, akun: akunName });
-      DB.set('data_stok', State.stok);
-      DB.set('data_akun', State.akun);
-      DB.set('data_transaksi', State.transaksi);
-      renderStokList(); renderAkunList(); clearFisikForm();
-  });
-
-  // Digital Transactions
-  const dDate = $('#dDate'), dAkun = $('#dAkun'), dJenis = $('#dJenis'), dBeli = $('#dBeli'), dJual = $('#dJual'), dLaba = $('#dLaba'), dPokok = $('#dPokok'), dFee = $('#dFee'), dDesc = $('#dDesc'), dSave = $('#dSave'), dClear = $('#dClear'), dModeJualBeli = $('#dModeJualBeli'), dModeTarik = $('#dModeTarik');
-
-  function handleDigitalModeChange() {
-      const mode = dJenis.value;
-      dModeJualBeli.classList.toggle('hidden', mode === 'tarik');
-      dModeTarik.classList.toggle('hidden', mode !== 'tarik');
-  }
-
-  function updateDigitalLaba() {
-      dLaba.textContent = formatRupiah((parseInt(dJual.value) || 0) - (parseInt(dBeli.value) || 0));
-  }
-
-  function clearDigitalForm() {
-      const getTodayDate = () => new Date().toISOString().split('T')[0];
-      dJenis.value = 'jual'; dBeli.value = '0'; dJual.value = '0'; dPokok.value = '0';
-      dFee.value = '0'; dDesc.value = ''; dDate.value = getTodayDate();
-      updateDigitalLaba(); handleDigitalModeChange();
-  }
-
-  dJenis.addEventListener('change', handleDigitalModeChange);
-  [dBeli, dJual].forEach(el => el.addEventListener('input', updateDigitalLaba));
-  dClear.addEventListener('click', clearDigitalForm);
-  dSave.addEventListener('click', () => {
-      const akunName = dAkun.value, jenis = dJenis.value, desc = dDesc.value.trim();
-      if (!akunName || State.akun.length === 0) { alert('Pilih akun saldo.'); return; }
-      if (!desc) { alert('Deskripsi tidak boleh kosong.'); return; }
-      const akunIndex = State.akun.findIndex(a => a.nama === akunName);
-      let saldoChange = 0, laba = 0, total = 0, detail = {};
-      if (jenis === 'jual' || jenis === 'beli') {
-          const beli = parseInt(dBeli.value) || 0, jual = parseInt(dJual.value) || 0;
-          if (jual <= 0 && jenis === 'jual') { alert('Harga Jual harus lebih dari 0.'); return; }
-          if (beli <= 0 && jenis === 'beli') { alert('Harga Beli harus lebih dari 0.'); return; }
-          laba = jual - beli; saldoChange = (jenis === 'jual') ? jual : -beli; total = saldoChange;
-          detail = { hargaBeli: beli, hargaJual: jual };
-      } else {
-          const pokok = parseInt(dPokok.value) || 0, fee = parseInt(dFee.value) || 0;
-          if (pokok <= 0) { alert('Jumlah Pokok harus lebih dari 0.'); return; }
-          laba = fee; saldoChange = -pokok; total = saldoChange;
-          detail = { pokok: pokok, fee: fee };
-      }
-      State.akun[akunIndex].saldo += saldoChange;
-      State.transaksi.unshift({ id: 'trx' + Date.now(), tanggal: dDate.value, jenis: 'digital', tipe: jenis, deskripsi: desc, laba: laba, total: total, akun: akunName, detail: detail });
-      DB.set('data_akun', State.akun);
-      DB.set('data_transaksi', State.transaksi);
-      renderAkunList(); clearDigitalForm();
-  });
-
-  // Reporting
-  const hScope = $('#hScope'), hAkun = $('#hAkun'), hFrom = $('#hFrom'), hTo = $('#hTo'), hSearch = $('#hSearch'), hClear = $('#hClear'), hSum = $('#hSum'), hList = $('#hList');
-  const rkSeg = $('#rkSeg'), rDate = $('#rDate'), rAkun = $('#rAkun'), rkBody = $('#rkBody'), rkTitle = $('#rkTitle');
-
   function renderHistory() {
       let filtered = [...State.transaksi];
       const akun = hAkun.value;
-      if (akun && akun !== 'semua') {
-          filtered = filtered.filter(t => t.akun === akun);
-      }
+      if (akun && akun !== 'semua') filtered = filtered.filter(t => t.akun === akun);
       const toDate = new Date(hTo.value + 'T23:59:59');
       let fromDate;
       const scope = hScope.value;
@@ -288,19 +666,11 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!hFrom.value) { hList.innerHTML = '<div class="sub">Pilih tanggal awal.</div>'; return; }
           fromDate = new Date(hFrom.value + 'T00:00:00');
       }
-      if (scope !== 'all') {
-          filtered = filtered.filter(t => { const d = new Date(t.tanggal); return d >= fromDate && d <= toDate; });
-      }
+      if (scope !== 'all') filtered = filtered.filter(t => { const d = new Date(t.tanggal); return d >= fromDate && d <= toDate; });
       const term = hSearch.value.trim().toLowerCase();
-      if (term) {
-          filtered = filtered.filter(t => (t.kode && t.kode.toLowerCase().includes(term)) || (t.nama && t.nama.toLowerCase().includes(term)) || (t.deskripsi && t.deskripsi.toLowerCase().includes(term)));
-      }
+      if (term) filtered = filtered.filter(t => (t.kode && t.kode.toLowerCase().includes(term)) || (t.nama && t.nama.toLowerCase().includes(term)) || (t.deskripsi && t.deskripsi.toLowerCase().includes(term)));
       hList.innerHTML = '';
-      if (filtered.length === 0) {
-          hList.innerHTML = '<div class="sub">Tidak ada transaksi.</div>';
-          hSum.textContent = 'Total: Rp 0';
-          return;
-      }
+      if (filtered.length === 0) { hList.innerHTML = '<div class="sub">Tidak ada transaksi.</div>'; hSum.textContent = 'Total: Rp 0'; return; }
       let totalSum = 0;
       filtered.forEach(t => {
           const div = document.createElement('div');
@@ -314,12 +684,10 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       hSum.textContent = `Total Arus Kas: ${formatRupiah(totalSum)}`;
   }
-
   function renderRekap() {
       let filtered = [...State.transaksi];
       const akun = rAkun.value;
       if (akun && akun !== 'semua') filtered = filtered.filter(t => t.akun === akun);
-
       const date = new Date(rDate.value + 'T12:00:00');
       const scope = rkSeg.querySelector('.on').dataset.s;
       let fromDate, toDate;
@@ -341,47 +709,86 @@ document.addEventListener('DOMContentLoaded', () => {
           rkTitle.value = `Rekap Bulanan: ${date.toLocaleString('id-ID', { month: 'long', year: 'numeric' })}`;
       }
       filtered = filtered.filter(t => { const d = new Date(t.tanggal); return d >= fromDate && d <= toDate; });
-
       let totalOmzet = 0, totalModal = 0, totalLaba = 0;
       filtered.forEach(t => {
           totalLaba += t.laba;
           if (t.jenis === 'fisik' && t.tipe === 'jual') { totalOmzet += t.total; totalModal += (t.hargaBeli * t.qty); }
           else if (t.jenis === 'digital' && t.tipe === 'jual') { totalOmzet += t.total; totalModal += t.detail.hargaBeli || 0; }
       });
-
       if (filtered.length === 0) { rkBody.innerHTML = 'Tidak ada data transaksi untuk periode ini.'; return; }
       rkBody.innerHTML = `<div class="row cols-3"><div class="stat"><span>Total Omzet</span><b>${formatRupiah(totalOmzet)}</b></div><div class="stat"><span>Total Modal</span><b>${formatRupiah(totalModal)}</b></div><div class="stat"><span>Total Laba</span><b>${formatRupiah(totalLaba)}</b></div></div><div class="sub mt12">${filtered.length} transaksi tercatat.</div>`;
   }
-
+  function loadPengaturanForm() { uTheme.value = State.pengaturan.theme; uFont.value = State.pengaturan.font; }
+  function loadProfileSettings() { pName.value = DB.get('profil_nama', ''); pWa.value = DB.get('profil_wa', ''); pAddr.value = DB.get('profil_alamat', ''); };
+  function findAndFillItem() {
+      const kode = fKode.value.trim().toUpperCase(); if (!kode) return;
+      const item = State.stok.find(s => s.kode === kode);
+      if (item) { currentItem = item; fNama.value = item.nama; fBeli.value = item.beli; fJual.value = item.jual; fQty.focus(); }
+      else { currentItem = null; fNama.value = ''; fBeli.value = ''; fJual.value = ''; alert('Barang tidak ditemukan di stok.'); }
+      updateFisikStats();
+  }
+  function updateFisikStats() {
+      const qty = parseInt(fQty.value) || 0, beli = parseInt(fBeli.value) || 0, jual = parseInt(fJual.value) || 0;
+      const modal = beli * qty, omzet = jual * qty, laba = omzet - modal;
+      fModal.textContent = formatRupiah(modal); fOmzet.textContent = formatRupiah(omzet); fLaba.textContent = formatRupiah(laba);
+  }
+  function clearFisikForm() { currentItem = null; fKode.value = ''; fNama.value = ''; fBeli.value = ''; fJual.value = ''; fQty.value = '1'; fJenis.value = 'jual'; fDate.value = getTodayDate(); updateFisikStats(); fKode.focus(); }
+  function handleDigitalModeChange() { const mode = dJenis.value; dModeJualBeli.classList.toggle('hidden', mode === 'tarik'); dModeTarik.classList.toggle('hidden', mode !== 'tarik'); }
+  function updateDigitalLaba() { dLaba.textContent = formatRupiah((parseInt(dJual.value) || 0) - (parseInt(dBeli.value) || 0)); }
+  function clearDigitalForm() { dJenis.value = 'jual'; dBeli.value = '0'; dJual.value = '0'; dPokok.value = '0'; dFee.value = '0'; dDesc.value = ''; dDate.value = getTodayDate(); updateDigitalLaba(); handleDigitalModeChange(); }
   function initHistoryPage() {
       hTo.value = getTodayDate(); hFrom.style.display = 'none';
-      const allOption = document.createElement('option');
-      allOption.value = 'semua';
-      allOption.textContent = 'Semua Akun';
-      hAkun.prepend(allOption);
+      const allOption = document.createElement('option'); allOption.value = 'semua'; allOption.textContent = 'Semua Akun'; hAkun.prepend(allOption);
       hScope.addEventListener('change', () => { hFrom.style.display = hScope.value === 'custom' ? 'block' : 'none'; renderHistory(); });
       [hAkun, hFrom, hTo, hSearch].forEach(el => el.addEventListener('input', renderHistory));
       hClear.addEventListener('click', () => { hScope.value = 'month'; hTo.value = getTodayDate(); hFrom.value = ''; hAkun.value = 'semua'; hSearch.value = ''; hFrom.style.display = 'none'; renderHistory(); });
   }
-
   function initRekapPage() {
       rDate.value = getTodayDate();
-      const allOption = document.createElement('option');
-      allOption.value = 'semua';
-      allOption.textContent = 'Semua Akun';
-      rAkun.prepend(allOption);
+      const allOption = document.createElement('option'); allOption.value = 'semua'; allOption.textContent = 'Semua Akun'; rAkun.prepend(allOption);
       [rDate, rAkun].forEach(el => el.addEventListener('input', renderRekap));
-      rkSeg.addEventListener('click', (e) => {
-          if (e.target.tagName === 'BUTTON') {
-              rkSeg.querySelector('.on').classList.remove('on');
-              e.target.classList.add('on');
-              renderRekap();
-          }
-      });
+      rkSeg.addEventListener('click', (e) => { if (e.target.tagName === 'BUTTON') { rkSeg.querySelector('.on').classList.remove('on'); e.target.classList.add('on'); renderRekap(); } });
       new MutationObserver((mutations) => { if (!mutations[0].target.classList.contains('hidden')) { updateBranding(); renderRekap(); } }).observe($('#page-rekap'), { attributes: true });
   }
 
+  // --- EVENT LISTENERS ---
+  $('#nav').addEventListener('click', (e) => { const t = e.target.closest('a.tab'); if(t && t.dataset.go) { e.preventDefault(); showPage(t.dataset.go); } });
+  $('#btnMenu').addEventListener('click', () => $('#drawer').classList.add('open'));
+  $('#closeDrawer').addEventListener('click', () => $('#drawer').classList.remove('open'));
+  $('#mask').addEventListener('click', () => $('#drawer').classList.remove('open'));
+  $('#drawer .menu').addEventListener('click', (e) => { const t = e.target.closest('a'); if(t && t.dataset.go) { e.preventDefault(); showPage(t.dataset.go); } });
+  pSave.addEventListener('click', () => { DB.set('profil_nama', pName.value); DB.set('profil_wa', pWa.value); DB.set('profil_alamat', pAddr.value); const file = pLogo.files[0]; if (file) { const reader = new FileReader(); reader.onload = (e) => { DB.set('profil_logo', e.target.result); updateBranding(); alert('Profil berhasil disimpan!'); }; reader.readAsDataURL(file); } else { updateBranding(); alert('Profil berhasil disimpan!'); } });
+  pClear.addEventListener('click', () => { if (!confirm('Anda yakin?')) return; pName.value = ''; pWa.value = ''; pAddr.value = ''; pLogo.value = ''; ['profil_nama', 'profil_wa', 'profil_alamat', 'profil_logo'].forEach(k => localStorage.removeItem(k)); updateBranding(); alert('Profil dikosongkan.'); });
+  uSave.addEventListener('click', () => { State.pengaturan.theme = uTheme.value; State.pengaturan.font = uFont.value; saveState('pengaturan'); applyPengaturan(); alert('Pengaturan user disimpan!'); });
+  bgSave.addEventListener('click', () => { const file = bgFile.files[0]; if (!file) { alert('Pilih file gambar.'); return; } if (file.size > 2 * 1024 * 1024) { alert('Ukuran gambar maks 2MB.'); return; } const reader = new FileReader(); reader.onload = (e) => { DB.set('app_background', e.target.result); applyBackground(); alert('Background disimpan!'); }; reader.readAsDataURL(file); });
+  bgClear.addEventListener('click', () => { if (confirm('Hapus background?')) { localStorage.removeItem('app_background'); applyBackground(); bgFile.value = ''; } });
+  paAdd.addEventListener('click', () => { const nama = paName.value.trim(); const saldo = parseInt(paAwal.value) || 0; const limit = parseInt(paLimit.value) || 0; if (!nama) { alert('Nama akun tidak boleh kosong.'); return; } const existingIdx = State.akun.findIndex(a => a.nama.toLowerCase() === nama.toLowerCase()); if (existingIdx > -1) { State.akun[existingIdx].saldo = saldo; State.akun[existingIdx].limit = limit; } else { State.akun.push({ nama, saldo, limit }); } saveState('akun'); renderAkunList(); paName.value = ''; paAwal.value = ''; paLimit.value = ''; });
+  paDel.addEventListener('click', () => { const nama = paName.value.trim(); if (!nama) { alert('Isi nama akun.'); return; } const initialLength = State.akun.length; State.akun = State.akun.filter(a => a.nama.toLowerCase() !== nama.toLowerCase()); if (State.akun.length === initialLength) { alert(`Akun "${nama}" tidak ditemukan.`); } else { saveState('akun'); renderAkunList(); paName.value = ''; paAwal.value = ''; paLimit.value = ''; } });
+  paList.addEventListener('click', (e) => { const row = e.target.closest('tr'); if (!row) return; const akun = State.akun.find(a => a.nama === row.dataset.nama); if (akun) { paName.value = akun.nama; paAwal.value = akun.saldo; paLimit.value = akun.limit || ''; } });
+  tAdd.addEventListener('click', () => { const kode = tKode.value.trim().toUpperCase(), nama = tNama.value.trim(), beli = parseInt(tBeli.value) || 0, jual = parseInt(tJual.value) || 0, qty = parseInt(tQty.value) || 0; if (!kode || !nama) { alert('Kode dan Nama barang tidak boleh kosong.'); return; } const existingIdx = State.stok.findIndex(s => s.kode === kode); if (existingIdx > -1) { const item = State.stok[existingIdx]; item.nama = nama; item.beli = beli; item.jual = jual; if (qty > 0) item.qty += qty; } else { if (qty <= 0) { alert('Stok awal harus lebih dari 0.'); return; } State.stok.push({ kode, nama, beli, jual, qty }); } saveState('stok'); renderStokList(); tKode.value = ''; tNama.value = ''; tBeli.value = ''; tJual.value = ''; tQty.value = ''; tQty.placeholder = 'Stok Awal / Tambah'; });
+  tDel.addEventListener('click', () => { const kode = tKode.value.trim().toUpperCase(); if (!kode) { alert('Isi kode barang.'); return; } const initialLength = State.stok.length; State.stok = State.stok.filter(s => s.kode !== kode); if (State.stok.length === initialLength) { alert(`Barang dengan kode "${kode}" tidak ditemukan.`); } else { saveState('stok'); renderStokList(); tKode.value = ''; tNama.value = ''; tBeli.value = ''; tJual.value = ''; tQty.value = ''; tQty.placeholder = 'Stok Awal / Tambah'; } });
+  tList.addEventListener('click', (e) => { const row = e.target.closest('tr'); if (!row) return; const item = State.stok.find(s => s.kode === row.dataset.kode); if (item) { tKode.value = item.kode; tNama.value = item.nama; tBeli.value = item.beli; tJual.value = item.jual; tQty.value = ''; tQty.placeholder = `Stok ada: ${item.qty}. Isi untuk menambah.`; } });
+  fKode.addEventListener('change', findAndFillItem);
+  fBtnAuto.addEventListener('click', findAndFillItem);
+  [fQty, fJual, fBeli].forEach(el => el.addEventListener('input', updateFisikStats));
+  fClear.addEventListener('click', clearFisikForm);
+  fSave.addEventListener('click', () => { if (!currentItem) { alert('Pilih barang dari stok.'); return; } const akunName = fAkun.value; if (!akunName || State.akun.length === 0) { alert('Pilih akun saldo.'); return; } const qty = parseInt(fQty.value); if (!qty || qty <= 0) { alert('Kuantitas harus lebih dari 0.'); return; } const jenis = fJenis.value; const itemIndex = State.stok.findIndex(s => s.kode === currentItem.kode); const akunIndex = State.akun.findIndex(a => a.nama === akunName); if ((jenis === 'jual' || jenis === 'retur') && State.stok[itemIndex].qty < qty) { alert(`Stok tidak cukup. Sisa: ${State.stok[itemIndex].qty}`); return; } const beli = parseInt(fBeli.value), jual = parseInt(fJual.value), modal = beli * qty, omzet = jual * qty; let saldoChange = 0; if (jenis === 'jual') { State.stok[itemIndex].qty -= qty; saldoChange = omzet; } else if (jenis === 'beli') { State.stok[itemIndex].qty += qty; saldoChange = -modal; } else if (jenis === 'retur') { State.stok[itemIndex].qty -= qty; saldoChange = modal; } State.akun[akunIndex].saldo += saldoChange; State.transaksi.unshift({ id: 'trx' + Date.now(), tanggal: fDate.value, jenis: 'fisik', tipe: jenis, kode: currentItem.kode, nama: currentItem.nama, qty: qty, hargaBeli: beli, hargaJual: jual, laba: omzet - modal, total: jenis === 'beli' ? -modal : omzet, akun: akunName }); saveState(['stok', 'akun', 'transaksi']); renderStokList(); renderAkunList(); clearFisikForm(); });
+  dJenis.addEventListener('change', handleDigitalModeChange);
+  [dBeli, dJual].forEach(el => el.addEventListener('input', updateDigitalLaba));
+  dClear.addEventListener('click', clearDigitalForm);
+  dSave.addEventListener('click', () => { const akunName = dAkun.value, jenis = dJenis.value, desc = dDesc.value.trim(); if (!akunName || State.akun.length === 0) { alert('Pilih akun saldo.'); return; } if (!desc) { alert('Deskripsi tidak boleh kosong.'); return; } const akunIndex = State.akun.findIndex(a => a.nama === akunName); let saldoChange = 0, laba = 0, total = 0, detail = {}; if (jenis === 'jual' || jenis === 'beli') { const beli = parseInt(dBeli.value) || 0, jual = parseInt(dJual.value) || 0; if (jual <= 0 && jenis === 'jual') { alert('Harga Jual harus lebih dari 0.'); return; } if (beli <= 0 && jenis === 'beli') { alert('Harga Beli harus lebih dari 0.'); return; } laba = jual - beli; saldoChange = (jenis === 'jual') ? jual : -beli; total = saldoChange; detail = { hargaBeli: beli, hargaJual: jual }; } else { const pokok = parseInt(dPokok.value) || 0, fee = parseInt(dFee.value) || 0; if (pokok <= 0) { alert('Jumlah Pokok harus lebih dari 0.'); return; } laba = fee; saldoChange = -pokok; total = saldoChange; detail = { pokok: pokok, fee: fee }; } State.akun[akunIndex].saldo += saldoChange; State.transaksi.unshift({ id: 'trx' + Date.now(), tanggal: dDate.value, jenis: 'digital', tipe: jenis, deskripsi: desc, laba: laba, total: total, akun: akunName, detail: detail }); saveState(['akun', 'transaksi']); renderAkunList(); clearDigitalForm(); });
+  [hScope, hAkun, hFrom, hTo, hSearch].forEach(el => el.addEventListener('input', renderHistory));
+  hClear.addEventListener('click', () => { hScope.value = 'month'; hTo.value = getTodayDate(); hFrom.value = ''; hAkun.value = 'semua'; hSearch.value = ''; hFrom.style.display = 'none'; renderHistory(); });
+  [rDate, rAkun].forEach(el => el.addEventListener('input', renderRekap));
+  rkSeg.addEventListener('click', (e) => { if (e.target.tagName === 'BUTTON') { rkSeg.querySelector('.on').classList.remove('on'); e.target.classList.add('on'); renderRekap(); } });
+
+  // --- INITIAL LOAD & EXECUTION ---
   loadState();
+  applyBackground();
+  updateBranding();
+  loadProfileSettings();
+  loadPengaturanForm();
+  applyPengaturan();
   renderAkunList();
   renderStokList();
   clearFisikForm();
@@ -391,3 +798,5 @@ document.addEventListener('DOMContentLoaded', () => {
   showPage('fisik');
 });
 </script>
+</body>
+</html>
