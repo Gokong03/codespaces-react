@@ -41,7 +41,6 @@ function saveState(key) {
   if (keys.includes('pengaturan')) DB.set('data_pengaturan', State.pengaturan);
 }
 
-// ========== UI RENDER & UPDATE FUNCTIONS ==========
 function updateBranding() {
   const nama = DB.get('profil_nama', 'Kasir Multi Saldo');
   const logoData = DB.get('profil_logo', null);
@@ -99,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let currentItem = null;
 
-  // --- RENDER & LOGIC FUNCTIONS ---
+  // --- RENDER & LOGIC FUNCTIONS (defined inside DOMContentLoaded to have access to elements) ---
   const getTodayDate = () => new Date().toISOString().split('T')[0];
 
   function updateAkunDropdowns() {
@@ -344,14 +343,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- EVENT LISTENERS ---
-  // Navigation
   $('#nav').addEventListener('click', (e) => { const t = e.target.closest('a.tab'); if(t && t.dataset.go) { e.preventDefault(); showPage(t.dataset.go); } });
   $('#btnMenu').addEventListener('click', () => $('#drawer').classList.add('open'));
   $('#closeDrawer').addEventListener('click', () => $('#drawer').classList.remove('open'));
   $('#mask').addEventListener('click', () => $('#drawer').classList.remove('open'));
   $('#drawer .menu').addEventListener('click', (e) => { const t = e.target.closest('a'); if(t && t.dataset.go) { e.preventDefault(); showPage(t.dataset.go); } });
 
-  // Settings: Profile
   pSave.addEventListener('click', () => {
     DB.set('profil_nama', pName.value); DB.set('profil_wa', pWa.value); DB.set('profil_alamat', pAddr.value);
     const file = pLogo.files[0];
@@ -368,7 +365,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updateBranding(); alert('Profil telah dikosongkan.');
   });
 
-  // Settings: User, Theme, BG
   uSave.addEventListener('click', () => {
     State.pengaturan.theme = uTheme.value; State.pengaturan.font = uFont.value;
     saveState('pengaturan'); applyPengaturan(); alert('Pengaturan user disimpan!');
@@ -385,7 +381,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (confirm('Anda yakin ingin menghapus background?')) { localStorage.removeItem('app_background'); applyBackground(); bgFile.value = ''; alert('Background telah dihapus.'); }
   });
 
-  // Settings: Accounts
   paAdd.addEventListener('click', () => {
     const nama = paName.value.trim(); const saldo = parseInt(paAwal.value) || 0; const limit = parseInt(paLimit.value) || 0;
     if (!nama) { alert('Nama akun tidak boleh kosong.'); return; }
@@ -407,7 +402,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (akun) { paName.value = akun.nama; paAwal.value = akun.saldo; paLimit.value = akun.limit || ''; }
   });
 
-  // Stock Management
   tAdd.addEventListener('click', () => {
       const kode = tKode.value.trim().toUpperCase(), nama = tNama.value.trim(), beli = parseInt(tBeli.value) || 0, jual = parseInt(tJual.value) || 0, qty = parseInt(tQty.value) || 0;
       if (!kode || !nama) { alert('Kode dan Nama barang tidak boleh kosong.'); return; }
@@ -435,7 +429,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (item) { tKode.value = item.kode; tNama.value = item.nama; tBeli.value = item.beli; tJual.value = item.jual; tQty.value = ''; tQty.placeholder = `Stok ada: ${item.qty}. Isi untuk menambah.`; }
   });
 
-  // Physical Transactions
   fKode.addEventListener('change', findAndFillItem);
   fBtnAuto.addEventListener('click', findAndFillItem);
   [fQty, fJual, fBeli].forEach(el => el.addEventListener('input', updateFisikStats));
@@ -459,7 +452,6 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('Transaksi berhasil disimpan!'); renderStokList(); renderAkunList(); clearFisikForm();
   });
 
-  // Digital Transactions
   dJenis.addEventListener('change', handleDigitalModeChange);
   [dBeli, dJual].forEach(el => el.addEventListener('input', updateDigitalLaba));
   dClear.addEventListener('click', clearDigitalForm);
@@ -487,7 +479,6 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('Transaksi digital berhasil disimpan!'); renderAkunList(); clearDigitalForm();
   });
 
-  // History & Rekap
   [hScope, hAkun, hFrom, hTo, hSearch].forEach(el => el.addEventListener('input', renderHistory));
   hClear.addEventListener('click', () => { hScope.value = 'month'; hTo.value = getTodayDate(); hFrom.value = ''; hAkun.value = 'semua'; hSearch.value = ''; hFrom.style.display = 'none'; renderHistory(); });
   [rDate, rAkun].forEach(el => el.addEventListener('input', renderRekap));
