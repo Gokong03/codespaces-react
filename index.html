@@ -255,13 +255,20 @@
           <select id="dJenis" class="input">
             <option value="jual">Penjualan</option>
             <option value="beli">Pembelian</option>
-            <option value="tarik">Tarik</option>
+            <option value="tarik">Jasa (Tarik/Transfer)</option>
           </select>
         </div>
       </div>
-      <div class="row cols-2 mt8">
-        <div><label>Harga Beli</label><input id="dBeli" class="input" type="number" value="0" /></div>
-        <div><label>Harga Jual</label><input id="dJual" class="input" type="number" value="0" /></div>
+      <div id="dInputs">
+        <div class="row cols-3 mt8" id="dModeJualBeli">
+          <div><label>Harga Beli (Modal)</label><input id="dBeli" class="input" type="number" value="0" /></div>
+          <div><label>Harga Jual (Omzet)</label><input id="dJual" class="input" type="number" value="0" /></div>
+          <div><label>Laba</label><div class="stat" style="padding: 12px;"><b id="dLaba">Rp 0</b></div></div>
+        </div>
+        <div class="row cols-2 mt8 hidden" id="dModeTarik">
+          <div><label>Jumlah Pokok</label><input id="dPokok" class="input" type="number" value="0" /></div>
+          <div><label>Fee / Biaya Admin</label><input id="dFee" class="input" type="number" value="0" /></div>
+        </div>
       </div>
       <label class="mt8">Deskripsi</label>
       <input id="dDesc" class="input" placeholder="Keterangan (opsional)" />
@@ -281,6 +288,7 @@
           <option value="day">Harian</option>
           <option value="week">Mingguan</option>
           <option value="month" selected>Bulanan</option>
+          <option value="custom">Custom</option>
           <option value="all">Semua</option>
         </select>
         <select id="hAkun" class="input"></select>
@@ -447,6 +455,17 @@
             <button id="uSave" class="btn primary">Simpan User</button>
             <button id="uLock" class="btn">Kunci Sekarang</button>
           </div>
+
+      <hr style="border-color:var(--muted);margin:16px 0">
+      <label>Ganti Background (opsional)</label>
+      <div class="row" style="grid-template-columns: 2fr 1fr; gap: 8px; align-items:center;">
+          <input id="bgFile" class="input" type="file" accept="image/*" />
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <button id="bgSave" class="btn primary">Simpan</button>
+              <button id="bgClear" class="btn danger">Hapus</button>
+          </div>
+      </div>
+      <div class="sub mt8">Pilih gambar untuk dijadikan latar belakang aplikasi (maks 2MB).</div>
         </div>
       </details>
 
@@ -517,6 +536,41 @@ const DB = {
     localStorage.setItem(key, typeof val === 'object' ? JSON.stringify(val) : val);
   }
 };
+
+// ========== APP HELPERS & STATE ==========
+const $ = (selector) => document.querySelector(selector);
+const $$ = (selector) => document.querySelectorAll(selector);
+
+const formatRupiah = (angka) => {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka || 0);
+};
+
+const State = {
+  akun: [],
+  stok: [],
+  transaksi: [],
+  pengaturan: { theme: 'dark', font: '15' }
+};
+
+function loadState() {
+  State.akun = DB.get('data_akun', []);
+  State.stok = DB.get('data_stok', []);
+  State.transaksi = DB.get('data_transaksi', []);
+  State.pengaturan = DB.get('data_pengaturan', { theme: 'dark', font: '15' });
+}
+
+function saveState(key) {
+  if (key === 'akun') DB.set('data_akun', State.akun);
+  else if (key === 'stok') DB.set('data_stok', State.stok);
+  else if (key === 'transaksi') DB.set('data_transaksi', State.transaksi);
+  else if (key === 'pengaturan') DB.set('data_pengaturan', State.pengaturan);
+  else { // if no key is specified, save everything
+    DB.set('data_akun', State.akun);
+    DB.set('data_stok', State.stok);
+    DB.set('data_transaksi', State.transaksi);
+    DB.set('data_pengaturan', State.pengaturan);
+  }
+}
 
 
 // ========== BRANDING ==========
@@ -590,6 +644,60 @@ function showPage(pageId) {
 
 // ========== INITIALIZATION ==========
 document.addEventListener('DOMContentLoaded', () => {
+  // --- BACKGROUND SETTINGS ---
+  const bgFile = $('#bgFile');
+  const bgSave = $('#bgSave');
+  const bgClear = $('#bgClear');
+
+  function applyBackground() {
+      const bgData = DB.get('app_background', null);
+      if (bgData) {
+          document.body.style.backgroundImage = `url(${bgData})`;
+          document.body.style.backgroundSize = 'cover';
+          document.body.style.backgroundPosition = 'center';
+          document.body.style.backgroundAttachment = 'fixed';
+      } else {
+          document.body.style.backgroundImage = 'none';
+      }
+  }
+
+  bgSave.addEventListener('click', () => {
+      const file = bgFile.files[0];
+      if (!file) {
+          alert('Pilih file gambar terlebih dahulu.');
+          return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+          alert('Ukuran gambar terlalu besar. Maksimal 2MB.');
+          return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+          DB.set('app_background', e.target.result);
+          applyBackground();
+          alert('Background berhasil disimpan!');
+      };
+      reader.onerror = () => {
+          alert('Gagal membaca file gambar.');
+      };
+      reader.readAsDataURL(file);
+  });
+
+  bgClear.addEventListener('click', () => {
+      if (confirm('Anda yakin ingin menghapus background?')) {
+          localStorage.removeItem('app_background');
+          applyBackground();
+          bgFile.value = '';
+          alert('Background telah dihapus.');
+      }
+  });
+
+  // Load all data from localStorage into State object
+  loadState();
+
+  // Apply background very first
+  applyBackground();
+
   // Set initial page
   showPage('fisik');
 
@@ -682,6 +790,824 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initial load of settings into the form when the app starts
   loadProfileSettings();
+
+  // --- USER SETTINGS (THEME/FONT) ---
+  const uTheme = $('#uTheme');
+  const uFont = $('#uFont');
+  const uSave = $('#uSave');
+
+  function applyPengaturan() {
+    // Apply theme
+    const theme = State.pengaturan.theme;
+    if (theme === 'auto') {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.dataset.theme = prefersDark ? 'dark' : 'light';
+    } else {
+        document.documentElement.dataset.theme = theme;
+    }
+    // Apply font size
+    document.body.style.fontSize = State.pengaturan.font + 'px';
+  }
+
+  function loadPengaturanForm() {
+    uTheme.value = State.pengaturan.theme;
+    uFont.value = State.pengaturan.font;
+  }
+
+  uSave.addEventListener('click', () => {
+    State.pengaturan.theme = uTheme.value;
+    State.pengaturan.font = uFont.value;
+    saveState('pengaturan');
+    applyPengaturan();
+    alert('Pengaturan user disimpan!');
+  });
+
+  // Initial load for user settings
+  applyPengaturan();
+  loadPengaturanForm();
+
+  // --- GLOBAL HELPERS for pages ---
+  const getTodayDate = () => new Date().toISOString().split('T')[0];
+
+  function updateAkunDropdowns() {
+    const dropdowns = $$('#fAkun, #dAkun, #hAkun, #rAkun, #ioAkun');
+    dropdowns.forEach(dd => {
+        const currentValue = dd.value;
+        dd.innerHTML = '';
+        if (State.akun.length === 0) {
+          dd.innerHTML = '<option>Buat akun dulu</option>';
+          return;
+        }
+        State.akun.forEach(akun => {
+            const option = document.createElement('option');
+            option.value = akun.nama;
+            option.textContent = akun.nama;
+            dd.appendChild(option);
+        });
+        if (currentValue && State.akun.some(a => a.nama === currentValue)) {
+            dd.value = currentValue;
+        }
+    });
+  }
+
+  // --- ACCOUNT (SALDO) SETTINGS ---
+  const paName = $('#paName');
+  const paAwal = $('#paAwal');
+  const paLimit = $('#paLimit');
+  const paAdd = $('#paAdd');
+  const paDel = $('#paDel');
+  const paList = $('#paList');
+  const paTotal = $('#paTotal');
+
+  function renderAkunList() {
+    paList.innerHTML = ''; // Clear list
+    if (State.akun.length === 0) {
+        paList.innerHTML = '<div class="sub">Belum ada akun. Silakan tambah.</div>';
+        paTotal.textContent = 'Total: Rp 0';
+        return;
+    }
+
+    const table = document.createElement('table');
+    table.className = 'table';
+    table.innerHTML = `<thead><tr><th>Nama Akun</th><th>Saldo</th><th>Limit</th></tr></thead><tbody></tbody>`;
+    const tbody = table.querySelector('tbody');
+
+    let totalSaldo = 0;
+    State.akun.forEach(akun => {
+        const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.setAttribute('data-nama', akun.nama);
+        tr.innerHTML = `
+            <td>${akun.nama}</td>
+            <td>${formatRupiah(akun.saldo)}</td>
+            <td>${formatRupiah(akun.limit)}</td>
+        `;
+        tbody.appendChild(tr);
+        totalSaldo += (akun.saldo || 0);
+    });
+
+    paList.appendChild(table);
+    paTotal.textContent = `Total: ${formatRupiah(totalSaldo)}`;
+    // Also update dropdowns everywhere else that uses accounts
+    updateAkunDropdowns();
+  }
+
+  // Event delegation for clicking on account list
+  paList.addEventListener('click', (e) => {
+    const row = e.target.closest('tr');
+    if (!row) return;
+    const nama = row.dataset.nama;
+    const akun = State.akun.find(a => a.nama === nama);
+    if (akun) {
+        paName.value = akun.nama;
+        paAwal.value = akun.saldo;
+        paLimit.value = akun.limit || '';
+    }
+  });
+
+  paAdd.addEventListener('click', () => {
+    const nama = paName.value.trim();
+    const saldo = parseInt(paAwal.value) || 0;
+    const limit = parseInt(paLimit.value) || 0;
+
+    if (!nama) {
+        alert('Nama akun tidak boleh kosong.');
+        return;
+    }
+
+    const existingAkunIndex = State.akun.findIndex(a => a.nama.toLowerCase() === nama.toLowerCase());
+
+    if (existingAkunIndex > -1) { // Update
+        State.akun[existingAkunIndex].saldo = saldo;
+        State.akun[existingAkunIndex].limit = limit;
+    } else { // Add new
+        State.akun.push({ nama, saldo, limit });
+    }
+
+    saveState('akun');
+    renderAkunList();
+    paName.value = '';
+    paAwal.value = '';
+    paLimit.value = '';
+    alert(`Akun "${nama}" berhasil disimpan.`);
+  });
+
+  paDel.addEventListener('click', () => {
+    const nama = paName.value.trim();
+    if (!nama) {
+        alert('Isi nama akun dari daftar yang ingin dihapus.');
+        return;
+    }
+
+    const initialLength = State.akun.length;
+    State.akun = State.akun.filter(a => a.nama.toLowerCase() !== nama.toLowerCase());
+
+    if (State.akun.length === initialLength) {
+        alert(`Akun "${nama}" tidak ditemukan.`);
+    } else {
+        saveState('akun');
+        renderAkunList();
+        paName.value = '';
+        paAwal.value = '';
+        paLimit.value = '';
+        alert(`Akun "${nama}" berhasil dihapus.`);
+    }
+  });
+
+  // Initial render for account list
+  renderAkunList();
+
+  // --- STOCK (STOK) MANAGEMENT ---
+  const tKode = $('#tKode');
+  const tNama = $('#tNama');
+  const tBeli = $('#tBeli');
+  const tJual = $('#tJual');
+  const tQty = $('#tQty');
+  const tAdd = $('#tAdd');
+  const tDel = $('#tDel');
+  const tList = $('#tList');
+
+  function renderStokList() {
+      tList.innerHTML = '';
+      if (State.stok.length === 0) {
+          tList.innerHTML = '<div class="sub">Belum ada barang di stok.</div>';
+          return;
+      }
+
+      const table = document.createElement('table');
+      table.className = 'table';
+      table.innerHTML = `
+          <thead>
+              <tr>
+                  <th>Kode</th>
+                  <th>Nama</th>
+                  <th>H. Beli</th>
+                  <th>H. Jual</th>
+                  <th>Stok</th>
+              </tr>
+          </thead>
+          <tbody></tbody>`;
+      const tbody = table.querySelector('tbody');
+
+      State.stok.forEach(item => {
+          const tr = document.createElement('tr');
+          tr.style.cursor = 'pointer';
+          tr.setAttribute('data-kode', item.kode);
+          tr.innerHTML = `
+              <td>${item.kode}</td>
+              <td>${item.nama}</td>
+              <td>${formatRupiah(item.beli)}</td>
+              <td>${formatRupiah(item.jual)}</td>
+              <td>${item.qty}</td>
+          `;
+          tbody.appendChild(tr);
+      });
+      tList.appendChild(table);
+  }
+
+  // Event delegation for clicking on stock list
+  tList.addEventListener('click', (e) => {
+      const row = e.target.closest('tr');
+      if (!row) return;
+      const kode = row.dataset.kode;
+      const item = State.stok.find(s => s.kode === kode);
+      if (item) {
+          tKode.value = item.kode;
+          tNama.value = item.nama;
+          tBeli.value = item.beli;
+          tJual.value = item.jual;
+          tQty.value = ''; // Clear qty for adding new stock
+          tQty.placeholder = `Stok ada: ${item.qty}. Isi untuk menambah.`;
+      }
+  });
+
+  tAdd.addEventListener('click', () => {
+      const kode = tKode.value.trim().toUpperCase();
+      const nama = tNama.value.trim();
+      const beli = parseInt(tBeli.value) || 0;
+      const jual = parseInt(tJual.value) || 0;
+      const qty = parseInt(tQty.value) || 0;
+
+      if (!kode || !nama) {
+          alert('Kode dan Nama barang tidak boleh kosong.');
+          return;
+      }
+
+      const existingItemIndex = State.stok.findIndex(s => s.kode === kode);
+
+      if (existingItemIndex > -1) { // Update existing item
+          const existingItem = State.stok[existingItemIndex];
+          existingItem.nama = nama;
+          existingItem.beli = beli;
+          existingItem.jual = jual;
+          if (qty > 0) { // Only add stock if a new quantity is entered
+              existingItem.qty += qty;
+          }
+          alert(`Stok untuk "${kode}" berhasil diupdate.`);
+      } else { // Add new item
+          if (qty <= 0) {
+              alert('Stok awal harus lebih dari 0 untuk barang baru.');
+              return;
+          }
+          State.stok.push({ kode, nama, beli, jual, qty });
+          alert(`Barang baru "${kode}" berhasil ditambahkan.`);
+      }
+
+      saveState('stok');
+      renderStokList();
+      // Clear form
+      tKode.value = '';
+      tNama.value = '';
+      tBeli.value = '';
+      tJual.value = '';
+      tQty.value = '';
+      tQty.placeholder = 'Stok Awal / Tambah';
+  });
+
+  tDel.addEventListener('click', () => {
+      const kode = tKode.value.trim().toUpperCase();
+      if (!kode) {
+          alert('Isi kode barang yang ingin dihapus.');
+          return;
+      }
+
+      const initialLength = State.stok.length;
+      State.stok = State.stok.filter(s => s.kode !== kode);
+
+      if (State.stok.length === initialLength) {
+          alert(`Barang dengan kode "${kode}" tidak ditemukan.`);
+      } else {
+          saveState('stok');
+          renderStokList();
+          // Clear form
+          tKode.value = '';
+          tNama.value = '';
+          tBeli.value = '';
+          tJual.value = '';
+          tQty.value = '';
+          tQty.placeholder = 'Stok Awal / Tambah';
+          alert(`Barang "${kode}" berhasil dihapus.`);
+      }
+  });
+
+  // Initial render for stock list
+  renderStokList();
+
+  // --- PHYSICAL TRANSACTION (FISIK) ---
+  const fDate = $('#fDate');
+  const fAkun = $('#fAkun');
+  const fQty = $('#fQty');
+  const fKode = $('#fKode');
+  const fNama = $('#fNama');
+  const fBtnAuto = $('#btnAuto');
+  const fBeli = $('#fBeli');
+  const fJual = $('#fJual');
+  const fJenis = $('#fJenis');
+  const fModal = $('#fModal');
+  const fOmzet = $('#fOmzet');
+  const fLaba = $('#fLaba');
+  const fSave = $('#fSave');
+  const fClear = $('#fClear');
+
+  let currentItem = null; // To hold the found stock item
+
+  function clearFisikForm() {
+      currentItem = null;
+      fKode.value = '';
+      fNama.value = '';
+      fBeli.value = '';
+      fJual.value = '';
+      fQty.value = '1';
+      fJenis.value = 'jual';
+      fDate.value = getTodayDate();
+      updateFisikStats();
+      fKode.focus();
+  }
+
+  function updateFisikStats() {
+      const qty = parseInt(fQty.value) || 0;
+      const beli = parseInt(fBeli.value) || 0;
+      const jual = parseInt(fJual.value) || 0;
+
+      const modal = beli * qty;
+      const omzet = jual * qty;
+      const laba = omzet - modal;
+
+      fModal.textContent = formatRupiah(modal);
+      fOmzet.textContent = formatRupiah(omzet);
+      fLaba.textContent = formatRupiah(laba);
+  }
+
+  function findAndFillItem() {
+      const kode = fKode.value.trim().toUpperCase();
+      if (!kode) return;
+
+      const item = State.stok.find(s => s.kode === kode);
+      if (item) {
+          currentItem = item;
+          fNama.value = item.nama;
+          fBeli.value = item.beli;
+          fJual.value = item.jual;
+          fQty.focus();
+      } else {
+          currentItem = null;
+          fNama.value = '';
+          fBeli.value = '';
+          fJual.value = '';
+          alert('Barang tidak ditemukan di stok.');
+      }
+      updateFisikStats();
+  }
+
+  // Event Listeners
+  fKode.addEventListener('change', findAndFillItem); // When user leaves the input
+  fBtnAuto.addEventListener('click', findAndFillItem);
+  [fQty, fJual, fBeli].forEach(el => el.addEventListener('input', updateFisikStats));
+  fClear.addEventListener('click', clearFisikForm);
+
+  fSave.addEventListener('click', () => {
+      // 1. Validation
+      if (!currentItem) {
+          alert('Pilih barang dari stok terlebih dahulu (ketik kode lalu enter).');
+          return;
+      }
+      const akunName = fAkun.value;
+      if (!akunName || State.akun.length === 0) {
+          alert('Pilih akun saldo. Jika kosong, buat dulu di Pengaturan.');
+          return;
+      }
+      const qty = parseInt(fQty.value);
+      if (!qty || qty <= 0) {
+          alert('Kuantitas harus lebih dari 0.');
+          return;
+      }
+      const jenis = fJenis.value;
+
+      // 2. Find item and account
+      const itemIndex = State.stok.findIndex(s => s.kode === currentItem.kode);
+      const akunIndex = State.akun.findIndex(a => a.nama === akunName);
+
+      // 3. Stock check for 'jual' and 'retur'
+      if (jenis === 'jual' || jenis === 'retur') {
+          if (State.stok[itemIndex].qty < qty) {
+              alert(`Stok tidak cukup. Sisa stok: ${State.stok[itemIndex].qty}`);
+              return;
+          }
+      }
+
+      // 4. Update stock and saldo
+      const beli = parseInt(fBeli.value);
+      const jual = parseInt(fJual.value);
+      const modal = beli * qty;
+      const omzet = jual * qty;
+      let saldoChange = 0;
+
+      if (jenis === 'jual') {
+          State.stok[itemIndex].qty -= qty;
+          saldoChange = omzet;
+      } else if (jenis === 'beli') {
+          State.stok[itemIndex].qty += qty;
+          saldoChange = -modal;
+      } else if (jenis === 'retur') { // Retur Beli
+          State.stok[itemIndex].qty -= qty;
+          saldoChange = modal; // We get money back for what we paid
+      }
+
+      State.akun[akunIndex].saldo += saldoChange;
+
+      // 5. Create transaction record
+      const newTrans = {
+          id: 'trx' + Date.now(),
+          tanggal: fDate.value,
+          jenis: 'fisik',
+          tipe: jenis, // jual, beli, retur
+          kode: currentItem.kode,
+          nama: currentItem.nama,
+          qty: qty,
+          hargaBeli: beli,
+          hargaJual: jual,
+          laba: omzet - modal,
+          total: jenis === 'beli' ? -modal : omzet,
+          akun: akunName
+      };
+      State.transaksi.unshift(newTrans);
+
+      // 6. Save state
+      saveState('stok');
+      saveState('akun');
+      saveState('transaksi');
+
+      // 7. Re-render lists and clear form
+      alert('Transaksi berhasil disimpan!');
+      renderStokList(); // To show updated quantity
+      renderAkunList(); // To show updated balance
+      clearFisikForm();
+  });
+
+  // Initial setup for the form
+  clearFisikForm();
+
+  // --- DIGITAL TRANSACTION (DIGITAL) ---
+  const dDate = $('#dDate');
+  const dAkun = $('#dAkun');
+  const dJenis = $('#dJenis');
+  const dBeli = $('#dBeli');
+  const dJual = $('#dJual');
+  const dLaba = $('#dLaba');
+  const dPokok = $('#dPokok');
+  const dFee = $('#dFee');
+  const dDesc = $('#dDesc');
+  const dSave = $('#dSave');
+  const dClear = $('#dClear');
+  const dModeJualBeli = $('#dModeJualBeli');
+  const dModeTarik = $('#dModeTarik');
+
+  function handleDigitalModeChange() {
+      const mode = dJenis.value;
+      if (mode === 'tarik') {
+          dModeJualBeli.classList.add('hidden');
+          dModeTarik.classList.remove('hidden');
+      } else { // jual or beli
+          dModeJualBeli.classList.remove('hidden');
+          dModeTarik.classList.add('hidden');
+      }
+  }
+
+  function updateDigitalLaba() {
+      const beli = parseInt(dBeli.value) || 0;
+      const jual = parseInt(dJual.value) || 0;
+      dLaba.textContent = formatRupiah(jual - beli);
+  }
+
+  function clearDigitalForm() {
+      dJenis.value = 'jual';
+      dBeli.value = '0';
+      dJual.value = '0';
+      dPokok.value = '0';
+      dFee.value = '0';
+      dDesc.value = '';
+      dDate.value = getTodayDate();
+      updateDigitalLaba();
+      handleDigitalModeChange();
+  }
+
+  // Event Listeners
+  dJenis.addEventListener('change', handleDigitalModeChange);
+  dBeli.addEventListener('input', updateDigitalLaba);
+  dJual.addEventListener('input', updateDigitalLaba);
+  dClear.addEventListener('click', clearDigitalForm);
+
+  dSave.addEventListener('click', () => {
+      const akunName = dAkun.value;
+      const jenis = dJenis.value;
+      const desc = dDesc.value.trim();
+
+      if (!akunName || State.akun.length === 0) {
+          alert('Pilih akun saldo. Jika kosong, buat dulu di Pengaturan.');
+          return;
+      }
+      if (!desc) {
+          alert('Deskripsi tidak boleh kosong (misal: Pulsa 10rb, Tarik Tunai ABC).');
+          return;
+      }
+
+      const akunIndex = State.akun.findIndex(a => a.nama === akunName);
+      let saldoChange = 0;
+      let laba = 0;
+      let total = 0;
+      let detail = {};
+
+      if (jenis === 'jual' || jenis === 'beli') {
+          const beli = parseInt(dBeli.value) || 0;
+          const jual = parseInt(dJual.value) || 0;
+          if (jual <= 0 && jenis === 'jual') {
+              alert('Harga Jual harus lebih dari 0.');
+              return;
+          }
+           if (beli <= 0 && jenis === 'beli') {
+              alert('Harga Beli harus lebih dari 0.');
+              return;
+          }
+          laba = jual - beli;
+          saldoChange = (jenis === 'jual') ? jual : -beli;
+          total = saldoChange;
+          detail = { hargaBeli: beli, hargaJual: jual };
+      } else { // tarik
+          const pokok = parseInt(dPokok.value) || 0;
+          const fee = parseInt(dFee.value) || 0;
+          if (pokok <= 0) {
+              alert('Jumlah Pokok harus lebih dari 0.');
+              return;
+          }
+          laba = fee;
+          saldoChange = -pokok;
+          total = saldoChange;
+          detail = { pokok: pokok, fee: fee };
+      }
+
+      State.akun[akunIndex].saldo += saldoChange;
+
+      const newTrans = {
+          id: 'trx' + Date.now(),
+          tanggal: dDate.value,
+          jenis: 'digital',
+          tipe: jenis,
+          deskripsi: desc,
+          laba: laba,
+          total: total,
+          akun: akunName,
+          detail: detail
+      };
+      State.transaksi.unshift(newTrans);
+
+      saveState('akun');
+      saveState('transaksi');
+
+      alert('Transaksi digital berhasil disimpan!');
+      renderAkunList();
+      clearDigitalForm();
+  });
+
+  // Initial setup
+  clearDigitalForm();
+
+  // --- HISTORY PAGE ---
+  const hScope = $('#hScope');
+  const hAkun = $('#hAkun');
+  const hFrom = $('#hFrom');
+  const hTo = $('#hTo');
+  const hSearch = $('#hSearch');
+  const hClear = $('#hClear');
+  const hSum = $('#hSum');
+  const hList = $('#hList');
+
+  function renderHistory() {
+      let filtered = [...State.transaksi];
+
+      // 1. Filter by Account
+      const akun = hAkun.value;
+      if (akun && akun !== 'semua') {
+          filtered = filtered.filter(t => t.akun === akun);
+      }
+
+      // 2. Filter by Date
+      const toDate = new Date(hTo.value + 'T23:59:59');
+      let fromDate;
+
+      const scope = hScope.value;
+      if (scope === 'day') {
+          fromDate = new Date(hTo.value + 'T00:00:00');
+      } else if (scope === 'week') {
+          fromDate = new Date(toDate);
+          fromDate.setDate(toDate.getDate() - 6);
+          fromDate.setHours(0,0,0,0);
+      } else if (scope === 'month') {
+          fromDate = new Date(toDate.getFullYear(), toDate.getMonth(), 1);
+      } else if (scope === 'custom') {
+          if (!hFrom.value) { // if custom is selected but no from-date, do nothing
+            hList.innerHTML = '<div class="sub">Pilih tanggal awal untuk rentang custom.</div>';
+            return;
+          }
+          fromDate = new Date(hFrom.value + 'T00:00:00');
+      }
+
+      if (scope !== 'all') {
+          filtered = filtered.filter(t => {
+              const tDate = new Date(t.tanggal);
+              return tDate >= fromDate && tDate <= toDate;
+          });
+      }
+
+      // 3. Filter by Search Term
+      const term = hSearch.value.trim().toLowerCase();
+      if (term) {
+          filtered = filtered.filter(t =>
+              (t.kode && t.kode.toLowerCase().includes(term)) ||
+              (t.nama && t.nama.toLowerCase().includes(term)) ||
+              (t.deskripsi && t.deskripsi.toLowerCase().includes(term))
+          );
+      }
+
+      // 4. Render list
+      hList.innerHTML = '';
+      if (filtered.length === 0) {
+          hList.innerHTML = '<div class="sub">Tidak ada transaksi yang cocok dengan filter.</div>';
+          hSum.textContent = 'Total: Rp 0';
+          return;
+      }
+
+      let totalSum = 0;
+      filtered.forEach(t => {
+          const div = document.createElement('div');
+          div.className = 'card mt8';
+          const isIncome = t.total >= 0;
+          const totalColor = isIncome ? 'var(--accent)' : 'var(--danger)';
+
+          let title = '';
+          if (t.jenis === 'fisik') {
+              title = `(${t.tipe}) ${t.nama} (${t.qty}x)`;
+          } else {
+              title = `(${t.tipe}) ${t.deskripsi}`;
+          }
+
+          div.innerHTML = `
+              <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                  <div>
+                      <b>${title}</b>
+                      <div class="sub">${t.tanggal} • Akun: ${t.akun}</div>
+                  </div>
+                  <div style="text-align:right">
+                      <b style="color:${totalColor}">${formatRupiah(t.total)}</b>
+                      <div class="sub">Laba: ${formatRupiah(t.laba)}</div>
+                  </div>
+              </div>
+          `;
+          hList.appendChild(div);
+          totalSum += t.total;
+      });
+
+      hSum.textContent = `Total Arus Kas: ${formatRupiah(totalSum)}`;
+  }
+
+  function initHistoryPage() {
+      const allOption = document.createElement('option');
+      allOption.value = 'semua';
+      allOption.textContent = 'Semua Akun';
+      hAkun.prepend(allOption);
+
+      hScope.value = 'month';
+      hTo.value = getTodayDate();
+      hFrom.style.display = 'none';
+
+      [hScope, hAkun, hFrom, hTo, hSearch].forEach(el => {
+          el.addEventListener('input', renderHistory);
+      });
+
+      hScope.addEventListener('change', () => {
+          hFrom.style.display = hScope.value === 'custom' ? 'block' : 'none';
+          renderHistory();
+      });
+
+      hClear.addEventListener('click', () => {
+          hScope.value = 'month';
+          hTo.value = getTodayDate();
+          hFrom.value = '';
+          hAkun.value = 'semua';
+          hSearch.value = '';
+          hFrom.style.display = 'none';
+          renderHistory();
+      });
+  }
+
+  initHistoryPage();
+
+  // --- REKAP PAGE ---
+  const rkSeg = $('#rkSeg');
+  const rDate = $('#rDate');
+  const rAkun = $('#rAkun');
+  const rkBody = $('#rkBody');
+  const rkTitle = $('#rkTitle');
+  const rkName = $('#rkName');
+  const rkAddr = $('#rkAddr');
+  const rkLogo = $('#rkLogo');
+
+  function renderRekap() {
+      let filtered = [...State.transaksi];
+
+      // 1. Filter by Account
+      const akun = rAkun.value;
+      if (akun && akun !== 'semua') {
+          filtered = filtered.filter(t => t.akun === akun);
+      }
+
+      // 2. Filter by Date
+      const date = new Date(rDate.value + 'T12:00:00');
+      const scope = rkSeg.querySelector('.on').dataset.s;
+      let fromDate, toDate;
+
+      if (scope === 'day') {
+          fromDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+          toDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+          rkTitle.value = `Rekap Harian: ${rDate.value}`;
+      } else if (scope === 'week') {
+          const dayOfWeek = date.getDay();
+          fromDate = new Date(date.setDate(date.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1)));
+          fromDate.setHours(0,0,0,0);
+          toDate = new Date(fromDate);
+          toDate.setDate(fromDate.getDate() + 6);
+          toDate.setHours(23,59,59,999);
+          rkTitle.value = `Rekap Mingguan: ${fromDate.toISOString().slice(0,10)} s/d ${toDate.toISOString().slice(0,10)}`;
+      } else { // month
+          fromDate = new Date(date.getFullYear(), date.getMonth(), 1);
+          toDate = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
+          rkTitle.value = `Rekap Bulanan: ${date.toLocaleString('id-ID', { month: 'long', year: 'numeric' })}`;
+      }
+
+      filtered = filtered.filter(t => {
+          const tDate = new Date(t.tanggal);
+          return tDate >= fromDate && tDate <= toDate;
+      });
+
+      // 3. Calculate metrics
+      let totalOmzet = 0;
+      let totalModal = 0;
+      let totalLaba = 0;
+
+      filtered.forEach(t => {
+          totalLaba += t.laba;
+          if (t.jenis === 'fisik' && t.tipe === 'jual') {
+              totalOmzet += t.total;
+              totalModal += (t.hargaBeli * t.qty);
+          } else if (t.jenis === 'digital' && t.tipe === 'jual') {
+              totalOmzet += t.total;
+              totalModal += t.detail.hargaBeli || 0;
+          }
+      });
+
+      // 4. Render
+      if (filtered.length === 0) {
+          rkBody.innerHTML = 'Tidak ada data transaksi untuk periode ini.';
+          return;
+      }
+
+      rkBody.innerHTML = `
+          <div class="row cols-3">
+              <div class="stat"><span>Total Omzet</span><b>${formatRupiah(totalOmzet)}</b></div>
+              <div class="stat"><span>Total Modal</span><b>${formatRupiah(totalModal)}</b></div>
+              <div class="stat"><span>Total Laba</span><b>${formatRupiah(totalLaba)}</b></div>
+          </div>
+          <div class="sub mt12">${filtered.length} transaksi tercatat.</div>
+      `;
+  }
+
+  function initRekapPage() {
+      const allOption = document.createElement('option');
+      allOption.value = 'semua';
+      allOption.textContent = 'Semua Akun';
+      rAkun.prepend(allOption);
+
+      rDate.value = getTodayDate();
+
+      [rDate, rAkun].forEach(el => el.addEventListener('input', renderRekap));
+
+      rkSeg.addEventListener('click', (e) => {
+          if (e.target.tagName === 'BUTTON') {
+              rkSeg.querySelector('.on').classList.remove('on');
+              e.target.classList.add('on');
+              renderRekap();
+          }
+      });
+
+      // Re-render rekap when page is shown
+      new MutationObserver((mutations) => {
+        if (!mutations[0].target.classList.contains('hidden')) {
+          updateBranding(); // Update branding info like logo
+          renderRekap();
+        }
+      }).observe($('#page-rekap'), { attributes: true });
+  }
+
+  initRekapPage();
 });
 </script>
 </body>
